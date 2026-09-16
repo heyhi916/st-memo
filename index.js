@@ -228,8 +228,8 @@ async function checkSavedDraft() {
     const name = saved.title.trim() || '제목 없음';
     const choice = await showDialog({
         icon: 'fa-rotate-left',
-        title: '저장하지 않은 내용이 있습니다',
-        message: `"${name}"\n쓰던 내용을 복구하시겠습니까?`,
+        title: '쓰던 내용을 복구하시겠습니까?',
+        message: `"${name}"`,
         buttons: [
             { label: '지우기', value: 'discard', kind: 'soft' },
             { label: '복구', value: 'restore', kind: 'accent' },
@@ -424,7 +424,7 @@ function renderTrash() {
         listEl.textContent = '';
 
         if (!items.length) {
-            listEl.append(makeEmpty('fa-trash-can', '휴지통이 비어 있습니다', `지운 메모는 ${TRASH_DAYS}일 동안 보관됩니다`));
+            listEl.append(makeEmpty('fa-trash-can', '휴지통이 비어 있습니다', `메모는 ${TRASH_DAYS}일 동안 보관됩니다`));
             continue;
         }
 
@@ -695,7 +695,7 @@ async function goList() {
         const choice = await showDialog({
             icon: 'fa-pen',
             title: '저장하지 않은 내용이 있습니다',
-            message: '나가면 고친 내용이 사라집니다.',
+            message: '',
             buttons,
         });
         if (choice === 'save') {
@@ -812,7 +812,7 @@ async function deleteNote(id) {
     const choice = await showDialog({
         icon: 'fa-trash-can',
         title: '휴지통으로 옮기시겠습니까?',
-        message: `"${name}"\n휴지통에서 ${TRASH_DAYS}일 동안 복구할 수 있습니다.`,
+        message: `"${name}"\n휴지통에서 ${TRASH_DAYS}일 안에 복구할 수 있습니다`,
         buttons: [
             { label: '취소', value: 'cancel', kind: 'soft' },
             { label: '휴지통으로', value: 'delete', kind: 'danger' },
@@ -836,7 +836,7 @@ async function deleteSelected() {
     const choice = await showDialog({
         icon: 'fa-trash-can',
         title: isAll ? '메모를 모두 휴지통으로 옮기시겠습니까?' : `메모 ${count}개를 휴지통으로 옮기시겠습니까?`,
-        message: `휴지통에서 ${TRASH_DAYS}일 동안 복구할 수 있습니다.`,
+        message: `휴지통에서 ${TRASH_DAYS}일 안에 복구할 수 있습니다`,
         buttons: [
             { label: '취소', value: 'cancel', kind: 'soft' },
             { label: '휴지통으로', value: 'delete', kind: 'danger' },
@@ -887,7 +887,7 @@ async function purgeNote(id) {
     const choice = await showDialog({
         icon: 'fa-trash-can',
         title: '완전히 삭제하시겠습니까?',
-        message: `"${name}"\n되돌릴 수 없습니다.`,
+        message: `"${name}"\n되돌릴 수 없습니다`,
         buttons: [
             { label: '취소', value: 'cancel', kind: 'soft' },
             { label: '영구 삭제', value: 'purge', kind: 'danger' },
@@ -911,7 +911,7 @@ async function emptyTrash() {
     const choice = await showDialog({
         icon: 'fa-trash-can',
         title: '휴지통을 비우시겠습니까?',
-        message: `메모 ${count}개가 완전히 지워집니다.\n되돌릴 수 없습니다.`,
+        message: `메모 ${count}개가 완전히 지워집니다\n되돌릴 수 없습니다`,
         buttons: [
             { label: '취소', value: 'cancel', kind: 'soft' },
             { label: '비우기', value: 'empty', kind: 'danger' },
@@ -987,7 +987,7 @@ async function importBackup(file) {
         return;
     }
     if (!fresh.length) {
-        showNotice('fa-circle-info', '새로 불러올 메모가 없습니다', `메모 ${skipped}개 모두 이미 있습니다`);
+        showNotice('fa-circle-info', '새로 불러올 메모가 없습니다');
         return;
     }
 
@@ -995,8 +995,8 @@ async function importBackup(file) {
         icon: 'fa-file-import',
         title: `메모 ${fresh.length}개를 불러오시겠습니까?`,
         message: skipped
-            ? `이미 있는 ${skipped}개는 제외하고 불러옵니다.\n지금 메모는 그대로 유지됩니다.`
-            : '지금 메모는 그대로 유지됩니다.',
+            ? '이미 있는 메모 제외'
+            : '',
         buttons: [
             { label: '취소', value: 'cancel', kind: 'soft' },
             { label: '불러오기', value: 'import', kind: 'accent' },
@@ -1010,7 +1010,7 @@ async function importBackup(file) {
     saveSettingsDebounced();
     view = 'list';
     render();
-    showNotice('fa-file-import', `메모 ${fresh.length}개를 불러왔습니다`, skipped ? `이미 있는 ${skipped}개는 제외했습니다` : '');
+    showNotice('fa-file-import', `메모 ${fresh.length}개를 불러왔습니다`, skipped ? '이미 있는 메모 제외' : '');
 }
 
 /* ---------- 선택 모드 ---------- */
@@ -1255,7 +1255,7 @@ const panelHtml = `
             </div>
             <div class="sm-list sm-trash-list"></div>
             <div class="sm-foot">
-                <span>${TRASH_DAYS}일 뒤에 자동으로 지워집니다</span>
+                <span>${TRASH_DAYS}일 뒤 자동으로 지워집니다</span>
             </div>
         </div>
 
