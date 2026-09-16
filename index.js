@@ -1190,7 +1190,7 @@ function watchPanelResize(panelEl) {
 const panelHtml = `
 <div id="sm_panel" class="sm-scope sm-hidden">
     <div class="sm-panel-header">
-        <span class="sm-panel-title"><i class="fa-solid fa-note-sticky"></i> 메모장</span>
+        <span class="sm-panel-title"><i class="fa-solid fa-note-sticky"></i> 심플메모장</span>
         <div class="sm-panel-btn sm-close" title="닫기"><i class="fa-solid fa-xmark"></i></div>
     </div>
     <div class="sm-body">
@@ -1286,7 +1286,7 @@ const panelHtml = `
 const menuButtonHtml = `
 <div id="sm_menu_button" class="list-group-item flex-container flexGap5 interactable" tabindex="0">
     <i class="fa-solid fa-note-sticky"></i>
-    <span>메모장</span>
+    <span>심플메모장</span>
 </div>`;
 
 jQuery(async () => {
