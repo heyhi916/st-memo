@@ -228,8 +228,8 @@ async function checkSavedDraft() {
     const name = saved.title.trim() || '제목 없음';
     const choice = await showDialog({
         icon: 'fa-rotate-left',
-        title: '저장 안 한 내용이 있어요',
-        message: `"${name}"\n마지막으로 쓰던 내용을 되살릴까요?`,
+        title: '저장하지 않은 내용이 있습니다',
+        message: `"${name}"\n쓰던 내용을 복구하시겠습니까?`,
         buttons: [
             { label: '지우기', value: 'discard', kind: 'soft' },
             { label: '복구', value: 'restore', kind: 'accent' },
@@ -286,9 +286,13 @@ function makeEmpty(iconClass, headline, hint) {
     icon.className = `fa-solid ${iconClass}`;
     const title = document.createElement('p');
     title.textContent = headline;
-    const sub = document.createElement('span');
-    sub.textContent = hint;
-    empty.append(icon, title, sub);
+    empty.append(icon, title);
+
+    if (hint) {
+        const sub = document.createElement('span');
+        sub.textContent = hint;
+        empty.append(sub);
+    }
     return empty;
 }
 
@@ -345,9 +349,12 @@ function renderList() {
         el.disabled = selected.size === 0;
         el.querySelector('.sm-delete-label').textContent = selected.size ? `${selected.size}개 삭제` : '삭제';
     }
-    for (const el of document.querySelectorAll('.sm-trash-count')) {
-        el.textContent = String(settings.trash.length);
+    // 휴지통에 뭔가 있으면 아이콘에 작은 점을 띄운다.
+    for (const el of document.querySelectorAll('.sm-trash-dot')) {
         el.classList.toggle('sm-hidden', settings.trash.length === 0);
+    }
+    for (const el of document.querySelectorAll('.sm-open-trash')) {
+        el.title = settings.trash.length ? `휴지통 (${settings.trash.length})` : '휴지통';
     }
 
     for (const listEl of document.querySelectorAll('.sm-note-list')) {
@@ -355,11 +362,11 @@ function renderList() {
         listEl.classList.toggle('sm-selecting', selecting);
 
         if (!total) {
-            listEl.append(makeEmpty('fa-note-sticky', '아직 메모가 없어요', '+ 새 메모를 눌러 시작하세요'));
+            listEl.append(makeEmpty('fa-note-sticky', '아직 메모가 없습니다', '+ 새 메모를 눌러 추가할 수 있습니다'));
             continue;
         }
         if (!shown.length) {
-            listEl.append(makeEmpty('fa-magnifying-glass', '찾는 메모가 없어요', `'${searchQuery.trim()}' 이(가) 들어간 메모가 없어요`));
+            listEl.append(makeEmpty('fa-magnifying-glass', '찾는 메모가 없습니다'));
             continue;
         }
 
@@ -417,7 +424,7 @@ function renderTrash() {
         listEl.textContent = '';
 
         if (!items.length) {
-            listEl.append(makeEmpty('fa-trash-can', '휴지통이 비어 있어요', `지운 메모가 ${TRASH_DAYS}일 동안 여기 있다가 사라져요`));
+            listEl.append(makeEmpty('fa-trash-can', '휴지통이 비어 있습니다', `지운 메모는 ${TRASH_DAYS}일 동안 보관됩니다`));
             continue;
         }
 
@@ -456,7 +463,7 @@ function renderTrash() {
             const restore = document.createElement('button');
             restore.type = 'button';
             restore.className = 'sm-mini sm-restore';
-            restore.innerHTML = '<i class="fa-solid fa-rotate-left"></i> 복원';
+            restore.innerHTML = '<i class="fa-solid fa-rotate-left"></i> 복구';
 
             const purge = document.createElement('button');
             purge.type = 'button';
@@ -687,8 +694,8 @@ async function goList() {
         }
         const choice = await showDialog({
             icon: 'fa-pen',
-            title: '저장하지 않은 내용이 있어요',
-            message: '이대로 나가면 고친 내용이 사라져요.',
+            title: '저장하지 않은 내용이 있습니다',
+            message: '나가면 고친 내용이 사라집니다.',
             buttons,
         });
         if (choice === 'save') {
@@ -707,7 +714,7 @@ function saveDraft() {
         return;
     }
     if (!hasContent()) {
-        showNotice('fa-circle-info', '제목이나 내용을 입력해주세요');
+        showNotice('fa-circle-info', '제목이나 내용이 비어 있습니다');
         return;
     }
     if (!isDirty()) {
@@ -738,17 +745,17 @@ function saveDraft() {
 
     saveSettingsDebounced();
     leaveEditor();
-    showNotice('fa-check', '저장했어요', `"${title}"`);
+    showNotice('fa-check', '저장했습니다', `"${title}"`);
 }
 
 function copyDraft() {
     if (!draft || !draft.text) {
-        showNotice('fa-circle-info', '복사할 내용이 없어요');
+        showNotice('fa-circle-info', '복사할 내용이 없습니다');
         return;
     }
     navigator.clipboard.writeText(draft.text)
-        .then(() => showNotice('fa-copy', '복사했어요'))
-        .catch(() => showNotice('fa-circle-exclamation', '복사하지 못했어요'));
+        .then(() => showNotice('fa-copy', '복사했습니다'))
+        .catch(() => showNotice('fa-circle-exclamation', '복사하지 못했습니다'));
 }
 
 function downloadFile(name, content, type) {
@@ -762,7 +769,7 @@ function downloadFile(name, content, type) {
 
 function downloadDraft() {
     if (!draft || !draft.text) {
-        showNotice('fa-circle-info', '내보낼 내용이 없어요');
+        showNotice('fa-circle-info', '내보낼 내용이 없습니다');
         return;
     }
     const safeTitle = (draft.title.trim() || 'memo').replace(/[\\/:*?"<>|]/g, '_').slice(0, 60);
@@ -804,8 +811,8 @@ async function deleteNote(id) {
     const name = note.title || '제목 없음';
     const choice = await showDialog({
         icon: 'fa-trash-can',
-        title: '휴지통으로 보낼까요?',
-        message: `"${name}"\n휴지통에서 ${TRASH_DAYS}일 동안 되살릴 수 있어요.`,
+        title: '휴지통으로 옮기시겠습니까?',
+        message: `"${name}"\n휴지통에서 ${TRASH_DAYS}일 동안 복구할 수 있습니다.`,
         buttons: [
             { label: '취소', value: 'cancel', kind: 'soft' },
             { label: '휴지통으로', value: 'delete', kind: 'danger' },
@@ -816,7 +823,7 @@ async function deleteNote(id) {
     }
     moveToTrash(new Set([id]));
     render();
-    showNotice('fa-trash-can', '휴지통으로 옮겼어요', `"${name}"`);
+    showNotice('fa-trash-can', '휴지통으로 옮겼습니다', `"${name}"`);
 }
 
 async function deleteSelected() {
@@ -828,8 +835,8 @@ async function deleteSelected() {
     const isAll = count === settings.notes.length;
     const choice = await showDialog({
         icon: 'fa-trash-can',
-        title: isAll ? '메모를 모두 휴지통으로 보낼까요?' : `메모 ${count}개를 휴지통으로 보낼까요?`,
-        message: `휴지통에서 ${TRASH_DAYS}일 동안 되살릴 수 있어요.`,
+        title: isAll ? '메모를 모두 휴지통으로 옮기시겠습니까?' : `메모 ${count}개를 휴지통으로 옮기시겠습니까?`,
+        message: `휴지통에서 ${TRASH_DAYS}일 동안 복구할 수 있습니다.`,
         buttons: [
             { label: '취소', value: 'cancel', kind: 'soft' },
             { label: '휴지통으로', value: 'delete', kind: 'danger' },
@@ -842,18 +849,17 @@ async function deleteSelected() {
     selecting = false;
     selected.clear();
     render();
-    showNotice('fa-trash-can', `${moved}개를 휴지통으로 옮겼어요`);
+    showNotice('fa-trash-can', `${moved}개를 휴지통으로 옮겼습니다`);
 }
 
 function openTrash() {
-    closeMenu();
     selecting = false;
     selected.clear();
     const removed = purgeExpiredTrash();
     view = 'trash';
     render();
     if (removed) {
-        showNotice('fa-trash-can', `오래된 메모 ${removed}개가 지워졌어요`, `휴지통에 ${TRASH_DAYS}일 넘게 있던 메모예요`);
+        showNotice('fa-trash-can', `오래된 메모 ${removed}개를 지웠습니다`);
     }
 }
 
@@ -868,7 +874,7 @@ function restoreNote(id) {
     settings.notes.unshift(note);
     saveSettingsDebounced();
     renderTrash();
-    showNotice('fa-rotate-left', '되살렸어요', `"${note.title || '제목 없음'}"`);
+    showNotice('fa-rotate-left', '복구했습니다', `"${note.title || '제목 없음'}"`);
 }
 
 async function purgeNote(id) {
@@ -880,8 +886,8 @@ async function purgeNote(id) {
     const name = note.title || '제목 없음';
     const choice = await showDialog({
         icon: 'fa-trash-can',
-        title: '완전히 지울까요?',
-        message: `"${name}"\n이제는 되돌릴 수 없어요.`,
+        title: '완전히 삭제하시겠습니까?',
+        message: `"${name}"\n되돌릴 수 없습니다.`,
         buttons: [
             { label: '취소', value: 'cancel', kind: 'soft' },
             { label: '영구 삭제', value: 'purge', kind: 'danger' },
@@ -893,7 +899,7 @@ async function purgeNote(id) {
     settings.trash = settings.trash.filter(item => item.id !== id);
     saveSettingsDebounced();
     renderTrash();
-    showNotice('fa-trash-can', '완전히 지웠어요');
+    showNotice('fa-trash-can', '삭제했습니다');
 }
 
 async function emptyTrash() {
@@ -904,8 +910,8 @@ async function emptyTrash() {
     }
     const choice = await showDialog({
         icon: 'fa-trash-can',
-        title: '휴지통을 비울까요?',
-        message: `메모 ${count}개가 완전히 지워져요.\n이제는 되돌릴 수 없어요.`,
+        title: '휴지통을 비우시겠습니까?',
+        message: `메모 ${count}개가 완전히 지워집니다.\n되돌릴 수 없습니다.`,
         buttons: [
             { label: '취소', value: 'cancel', kind: 'soft' },
             { label: '비우기', value: 'empty', kind: 'danger' },
@@ -917,13 +923,12 @@ async function emptyTrash() {
     settings.trash = [];
     saveSettingsDebounced();
     renderTrash();
-    showNotice('fa-trash-can', '휴지통을 비웠어요');
+    showNotice('fa-trash-can', '휴지통을 비웠습니다');
 }
 
 /* ---------- 백업 ---------- */
 
 function exportBackup() {
-    closeMenu();
     const notes = getSettings().notes.map(note => ({
         id: note.id,
         title: note.title,
@@ -932,17 +937,16 @@ function exportBackup() {
         pinned: !!note.pinned,
     }));
     if (!notes.length) {
-        showNotice('fa-circle-info', '내보낼 메모가 없어요');
+        showNotice('fa-circle-info', '내보낼 메모가 없습니다');
         return;
     }
     const data = { app: 'st-memo', version: 1, exportedAt: new Date().toISOString(), notes };
     const stamp = new Date().toISOString().slice(0, 10);
     downloadFile(`memo-backup-${stamp}.json`, JSON.stringify(data, null, 2), 'application/json');
-    showNotice('fa-download', '백업 파일을 내보냈어요', `메모 ${notes.length}개`);
+    showNotice('fa-download', '백업 파일을 저장했습니다', `메모 ${notes.length}개`);
 }
 
 function requestImport() {
-    closeMenu();
     const input = document.querySelector('#sm_panel .sm-import-file');
     if (input) {
         input.click();
@@ -954,13 +958,13 @@ async function importBackup(file) {
     try {
         data = JSON.parse(await file.text());
     } catch {
-        showNotice('fa-circle-exclamation', '읽을 수 없는 파일이에요', '메모장에서 내보낸 백업 파일인지 확인해주세요');
+        showNotice('fa-circle-exclamation', '읽을 수 없는 파일입니다', '메모장에서 내보낸 백업 파일만 불러올 수 있습니다');
         return;
     }
 
     const incoming = Array.isArray(data?.notes) ? data.notes : null;
     if (!incoming) {
-        showNotice('fa-circle-exclamation', '메모가 없는 파일이에요', '메모장에서 내보낸 백업 파일인지 확인해주세요');
+        showNotice('fa-circle-exclamation', '메모가 없는 파일입니다', '메모장에서 내보낸 백업 파일만 불러올 수 있습니다');
         return;
     }
 
@@ -979,20 +983,20 @@ async function importBackup(file) {
     const skipped = cleaned.length - fresh.length;
 
     if (!cleaned.length) {
-        showNotice('fa-circle-exclamation', '불러올 메모가 없어요');
+        showNotice('fa-circle-exclamation', '불러올 메모가 없습니다');
         return;
     }
     if (!fresh.length) {
-        showNotice('fa-circle-info', '이미 다 가지고 있어요', `메모 ${skipped}개를 건너뛰었어요`);
+        showNotice('fa-circle-info', '새로 불러올 메모가 없습니다', `메모 ${skipped}개 모두 이미 있습니다`);
         return;
     }
 
     const choice = await showDialog({
         icon: 'fa-file-import',
-        title: `메모 ${fresh.length}개를 불러올까요?`,
+        title: `메모 ${fresh.length}개를 불러오시겠습니까?`,
         message: skipped
-            ? `이미 있는 ${skipped}개는 건너뛰어요.\n지금 메모는 그대로 두고 더해집니다.`
-            : '지금 메모는 그대로 두고 더해집니다.',
+            ? `이미 있는 ${skipped}개는 제외하고 불러옵니다.\n지금 메모는 그대로 유지됩니다.`
+            : '지금 메모는 그대로 유지됩니다.',
         buttons: [
             { label: '취소', value: 'cancel', kind: 'soft' },
             { label: '불러오기', value: 'import', kind: 'accent' },
@@ -1006,21 +1010,7 @@ async function importBackup(file) {
     saveSettingsDebounced();
     view = 'list';
     render();
-    showNotice('fa-file-import', `${fresh.length}개를 불러왔어요`, skipped ? `이미 있던 ${skipped}개는 건너뛰었어요` : '');
-}
-
-/* ---------- 더보기 메뉴 ---------- */
-
-function closeMenu() {
-    for (const el of document.querySelectorAll('#sm_panel .sm-menu')) {
-        el.classList.add('sm-hidden');
-    }
-}
-
-function toggleMenu() {
-    for (const el of document.querySelectorAll('#sm_panel .sm-menu')) {
-        el.classList.toggle('sm-hidden');
-    }
+    showNotice('fa-file-import', `메모 ${fresh.length}개를 불러왔습니다`, skipped ? `이미 있는 ${skipped}개는 제외했습니다` : '');
 }
 
 /* ---------- 선택 모드 ---------- */
@@ -1121,8 +1111,6 @@ function setPanelOpen(open) {
     if (open) {
         refitPanel();
         checkSavedDraft();
-    } else {
-        closeMenu();
     }
     saveSettingsDebounced();
 }
@@ -1228,22 +1216,17 @@ const panelHtml = `
             </label>
             <div class="sm-list sm-note-list"></div>
             <div class="sm-foot sm-foot-list">
-                <span class="sm-menu-wrap">
-                    <button type="button" class="sm-btn sm-btn-round sm-menu-toggle" title="더보기">
-                        <i class="fa-solid fa-ellipsis"></i>
+                <span class="sm-foot-actions">
+                    <button type="button" class="sm-icon-btn sm-open-trash" title="휴지통">
+                        <i class="fa-solid fa-trash-can"></i>
+                        <span class="sm-trash-dot sm-hidden"></span>
                     </button>
-                    <div class="sm-menu sm-hidden">
-                        <button type="button" class="sm-menu-item sm-open-trash">
-                            <i class="fa-solid fa-trash-can"></i> 휴지통
-                            <span class="sm-trash-count sm-hidden">0</span>
-                        </button>
-                        <button type="button" class="sm-menu-item sm-export">
-                            <i class="fa-solid fa-download"></i> 백업 내보내기
-                        </button>
-                        <button type="button" class="sm-menu-item sm-import">
-                            <i class="fa-solid fa-file-import"></i> 백업 불러오기
-                        </button>
-                    </div>
+                    <button type="button" class="sm-icon-btn sm-export" title="백업 내보내기">
+                        <i class="fa-solid fa-download"></i>
+                    </button>
+                    <button type="button" class="sm-icon-btn sm-import" title="백업 불러오기">
+                        <i class="fa-solid fa-file-import"></i>
+                    </button>
                 </span>
                 <span class="sm-theme-pill" title="테마">
                     <span class="sm-theme-label">자동</span>
@@ -1272,7 +1255,7 @@ const panelHtml = `
             </div>
             <div class="sm-list sm-trash-list"></div>
             <div class="sm-foot">
-                <span>${TRASH_DAYS}일이 지나면 저절로 지워져요</span>
+                <span>${TRASH_DAYS}일 뒤에 자동으로 지워집니다</span>
             </div>
         </div>
 
@@ -1286,7 +1269,7 @@ const panelHtml = `
                     <i class="fa-solid fa-check"></i> 저장
                 </button>
             </div>
-            <textarea class="sm-text" placeholder="여기에 자유롭게 적어보세요."></textarea>
+            <textarea class="sm-text" placeholder="내용"></textarea>
             <div class="sm-foot">
                 <span class="sm-status-save"></span>
                 <span class="sm-foot-right">
@@ -1392,7 +1375,6 @@ jQuery(async () => {
     $(document).on('click', '.sm-save', saveDraft);
     $(document).on('click', '.sm-copy', copyDraft);
     $(document).on('click', '.sm-download', downloadDraft);
-    $(document).on('click', '.sm-menu-toggle', toggleMenu);
     $(document).on('click', '.sm-open-trash', openTrash);
     $(document).on('click', '.sm-export', exportBackup);
     $(document).on('click', '.sm-import', requestImport);
@@ -1406,13 +1388,6 @@ jQuery(async () => {
         this.value = '';
         if (file) {
             importBackup(file);
-        }
-    });
-
-    // 메뉴 바깥을 누르면 닫는다.
-    $(document).on('click', (event) => {
-        if (!event.target.closest('.sm-menu-wrap')) {
-            closeMenu();
         }
     });
 

@@ -15,9 +15,22 @@
     --sm-panel-bg: var(--SmartThemeBlurTintColor);
     --sm-dialog-bg: var(--SmartThemeBlurTintColor);
     --sm-backdrop: rgba(0, 0, 0, 0.4);
-    --sm-danger: #e8798c;
-    --sm-danger-soft: rgba(232, 121, 140, 0.18);
+    /* 자동일 때는 고정 색(분홍 등)을 쓰지 않고 SillyTavern 테마 색만 쓴다. */
+    --sm-danger: var(--SmartThemeBodyColor);
+    --sm-danger-soft: rgba(128, 128, 128, 0.26);
     --sm-scroll: var(--SmartThemeQuoteColor);
+}
+
+/* 자동: 강조 버튼도 테마 색으로. 테마의 강조색이 밝든 어둡든 글자가 묻히지 않는다. */
+#sm_panel[data-sm-theme="auto"] .sm-btn-accent {
+    background-color: var(--sm-accent-soft);
+    color: var(--sm-accent-ink);
+}
+
+#sm_panel[data-sm-theme="auto"] .sm-item.sm-checked .sm-check {
+    background-color: transparent;
+    border-color: var(--sm-accent);
+    color: var(--sm-accent);
 }
 
 .sm-scope[data-sm-theme="light"] {
@@ -599,71 +612,49 @@
     background-color: var(--sm-accent-soft);
 }
 
-/* 더보기 메뉴 (휴지통 · 백업) */
-.sm-menu-wrap {
-    position: relative;
-    display: inline-flex;
-}
 
-#sm_panel .sm-menu-toggle {
-    width: 30px;
-    height: 30px;
-}
-
-.sm-menu {
-    position: absolute;
-    left: 0;
-    bottom: 36px;
-    z-index: 6;
-    min-width: 172px;
-    padding: 6px;
-    border: 1px solid var(--sm-border);
-    border-radius: 14px;
-    background-color: var(--sm-dialog-bg);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-    animation: sm-pop 0.14s ease;
-}
-
-#sm_panel[data-sm-theme="auto"] .sm-menu {
-    backdrop-filter: blur(14px);
-}
-
-#sm_panel .sm-menu-item {
+/* 하단 아이콘 (휴지통 · 백업) */
+.sm-foot-actions {
     display: flex;
     align-items: center;
-    gap: 9px;
-    width: 100%;
+    gap: 2px;
+}
+
+#sm_panel .sm-icon-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
     margin: 0;
-    padding: 9px 10px;
+    padding: 0;
     border: none;
-    border-radius: 10px;
+    border-radius: 50%;
     background: transparent;
-    color: var(--sm-fg);
-    font-family: inherit;
-    font-size: 13px;
-    text-align: left;
-    white-space: nowrap;
-    cursor: pointer;
-}
-
-#sm_panel .sm-menu-item:hover {
-    background-color: var(--sm-accent-soft);
-}
-
-.sm-menu-item > i {
-    width: 15px;
-    text-align: center;
     color: var(--sm-muted);
+    font-size: 13px;
+    cursor: pointer;
+    transition: color 0.12s ease, background-color 0.12s ease;
 }
 
-.sm-trash-count {
-    margin-left: auto;
-    padding: 1px 7px;
-    border-radius: 9px;
+#sm_panel .sm-icon-btn:hover {
+    color: var(--sm-fg);
     background-color: var(--sm-accent-soft);
-    color: var(--sm-accent-ink);
-    font-size: 11px;
-    font-weight: 700;
+}
+
+#sm_panel .sm-icon-btn:active {
+    transform: scale(0.92);
+}
+
+.sm-trash-dot {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--sm-accent);
 }
 
 /* 휴지통 */
