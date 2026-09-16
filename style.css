@@ -1,0 +1,851 @@
+/* ============ 테마 ============ */
+/* 자동 — SillyTavern 테마 색을 따라감 */
+.sm-scope {
+    --sm-fg: var(--SmartThemeBodyColor);
+    --sm-muted: var(--SmartThemeBodyColor);
+    --sm-muted: color-mix(in srgb, var(--SmartThemeBodyColor) 60%, transparent);
+    --sm-card: rgba(128, 128, 128, 0.12);
+    --sm-card-hover: rgba(128, 128, 128, 0.22);
+    --sm-border: var(--SmartThemeBorderColor);
+    --sm-field: rgba(128, 128, 128, 0.10);
+    --sm-accent: var(--SmartThemeQuoteColor);
+    --sm-accent-fg: #ffffff;
+    --sm-accent-soft: rgba(128, 128, 128, 0.18);
+    --sm-accent-ink: var(--SmartThemeQuoteColor);
+    --sm-panel-bg: var(--SmartThemeBlurTintColor);
+    --sm-dialog-bg: var(--SmartThemeBlurTintColor);
+    --sm-backdrop: rgba(0, 0, 0, 0.4);
+    --sm-danger: #e8798c;
+    --sm-danger-soft: rgba(232, 121, 140, 0.18);
+    --sm-scroll: var(--SmartThemeQuoteColor);
+}
+
+.sm-scope[data-sm-theme="light"] {
+    --sm-fg: #514740;
+    --sm-muted: #ab9c92;
+    --sm-card: #fffdfb;
+    --sm-card-hover: #fff4f7;
+    --sm-border: #f2e4dc;
+    --sm-field: #fffdfb;
+    --sm-accent: #ff9ab2;
+    --sm-accent-fg: #ffffff;
+    --sm-accent-soft: #ffeef2;
+    --sm-accent-ink: #e0607f;
+    --sm-panel-bg: #fff8f4;
+    --sm-dialog-bg: #ffffff;
+    --sm-backdrop: rgba(90, 64, 52, 0.28);
+    --sm-danger: #ee6f89;
+    --sm-danger-soft: #ffe4ea;
+    --sm-scroll: #ffc3d1;
+}
+
+.sm-scope[data-sm-theme="dark"] {
+    --sm-fg: #ece7f1;
+    --sm-muted: #9d93ab;
+    --sm-card: #363042;
+    --sm-card-hover: #423a51;
+    --sm-border: #47405a;
+    --sm-field: #302a3b;
+    --sm-accent: #f4a7c0;
+    --sm-accent-fg: #3a2430;
+    --sm-accent-soft: #3f3550;
+    --sm-accent-ink: #f4a7c0;
+    --sm-panel-bg: #2b2635;
+    --sm-dialog-bg: #342e40;
+    --sm-backdrop: rgba(10, 6, 16, 0.5);
+    --sm-danger: #ff9fb4;
+    --sm-danger-soft: #4b3043;
+    --sm-scroll: #8a6b8e;
+}
+
+/* ============ 창 ============ */
+#sm_panel,
+#sm_panel * {
+    box-sizing: border-box;
+}
+
+#sm_panel {
+    position: fixed;
+    right: 20px;
+    top: 80px;
+    z-index: 3000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 300px;
+    min-height: 340px;
+    padding: 14px;
+    overflow: hidden;
+    resize: both;
+    border: 1px solid var(--sm-border);
+    border-radius: 18px;
+    background-color: var(--sm-panel-bg);
+    box-shadow: 0 10px 34px rgba(0, 0, 0, 0.35);
+    color: var(--sm-fg);
+    font-size: 14px;
+}
+
+#sm_panel[data-sm-theme="auto"] {
+    backdrop-filter: blur(var(--SmartThemeBlurStrength));
+}
+
+#sm_panel.sm-hidden,
+#sm_panel .sm-hidden {
+    display: none;
+}
+
+/* 폰: 상단 바와 채팅 입력창 사이를 채우는 시트 */
+#sm_panel.sm-mobile {
+    resize: none;
+    border-radius: 14px;
+    padding: 12px;
+    min-width: 0;
+    min-height: 0;
+}
+
+#sm_panel.sm-mobile .sm-panel-header {
+    cursor: default;
+}
+
+.sm-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex: 0 0 auto;
+    cursor: move;
+    touch-action: none;
+    user-select: none;
+}
+
+.sm-panel-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--sm-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sm-panel-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--sm-muted);
+}
+
+.sm-panel-btn:hover {
+    color: var(--sm-fg);
+    background-color: var(--sm-accent-soft);
+}
+
+/* ============ 본문 ============ */
+.sm-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.sm-view-list,
+.sm-view-editor,
+.sm-view-trash {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.sm-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.sm-head-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.sm-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 11px;
+    background-color: var(--sm-accent-soft);
+    color: var(--sm-accent-ink);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0;
+}
+
+/* ============ 버튼 ============ */
+#sm_panel .sm-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    flex: 0 0 auto;
+    height: 34px;
+    margin: 0;
+    padding: 0 14px;
+    border: none;
+    border-radius: 17px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: transform 0.12s ease, filter 0.12s ease, background-color 0.12s ease;
+}
+
+#sm_panel .sm-btn:hover {
+    filter: brightness(1.05);
+}
+
+#sm_panel .sm-btn:active {
+    transform: scale(0.95);
+}
+
+#sm_panel .sm-btn-accent {
+    background-color: var(--sm-accent);
+    color: var(--sm-accent-fg);
+}
+
+#sm_panel .sm-btn-soft {
+    background-color: var(--sm-accent-soft);
+    color: var(--sm-fg);
+}
+
+#sm_panel .sm-btn-danger {
+    background-color: var(--sm-danger-soft);
+    color: var(--sm-danger);
+}
+
+#sm_panel .sm-btn-round {
+    width: 34px;
+    padding: 0;
+    background-color: var(--sm-accent-soft);
+    color: var(--sm-fg);
+}
+
+#sm_panel .sm-btn:disabled {
+    background-color: var(--sm-accent-soft);
+    color: var(--sm-muted);
+    cursor: default;
+    filter: none;
+    transform: none;
+    opacity: 0.7;
+}
+
+/* ============ 검색 ============ */
+/* 테두리는 바깥 상자가 그리고, 아이콘·입력칸·지우기 버튼은 나란히 놓는다.
+   입력칸 여백을 테마가 덮어써도 아이콘과 글자가 겹칠 수 없다. */
+.sm-search-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+    height: 38px;
+    margin: 0;
+    padding: 0 5px 0 14px;
+    border: 1px solid var(--sm-border);
+    border-radius: 19px;
+    background-color: var(--sm-field);
+    cursor: text;
+}
+
+.sm-search-box:focus-within {
+    border-color: var(--sm-accent);
+}
+
+.sm-search-box > i {
+    flex: 0 0 auto;
+    font-size: 13px;
+    color: var(--sm-muted);
+}
+
+#sm_panel .sm-search {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    outline: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--sm-fg) !important;
+    caret-color: var(--sm-accent-ink);
+    font-family: inherit;
+    font-size: 13.5px;
+}
+
+.sm-search-clear {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 28px;
+    height: 28px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--sm-muted);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.sm-search-clear:hover {
+    color: var(--sm-fg);
+    background-color: var(--sm-accent-soft);
+}
+
+/* ============ 목록 ============ */
+.sm-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.sm-item {
+    flex: 0 0 auto;
+    padding: 10px 12px;
+    border: 1px solid var(--sm-border);
+    border-radius: 14px;
+    background-color: var(--sm-card);
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+}
+
+.sm-item:hover {
+    background-color: var(--sm-card-hover);
+}
+
+.sm-item-top {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.sm-dot {
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--sm-accent);
+}
+
+.sm-item-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-weight: 600;
+}
+
+.sm-item-del,
+.sm-item-pin {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    font-size: 12px;
+    color: var(--sm-muted);
+    opacity: 0.6;
+}
+
+.sm-item-del:hover {
+    opacity: 1;
+    color: var(--sm-danger);
+    background-color: var(--sm-danger-soft);
+}
+
+.sm-item-pin {
+    transform: rotate(30deg);
+}
+
+.sm-item-pin:hover {
+    opacity: 1;
+    color: var(--sm-accent-ink);
+    background-color: var(--sm-accent-soft);
+}
+
+.sm-item-pin.sm-pinned {
+    transform: none;
+    opacity: 1;
+    color: var(--sm-accent-ink);
+}
+
+.sm-list.sm-selecting .sm-item-pin {
+    display: none;
+}
+
+.sm-item-preview,
+.sm-item-date {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--sm-muted);
+}
+
+.sm-item-preview {
+    margin: 4px 0 0 15px;
+    font-size: 12.5px;
+}
+
+.sm-item-date {
+    margin: 3px 0 0 15px;
+    font-size: 11px;
+    opacity: 0.85;
+}
+
+/* 선택 모드: 점 대신 체크 동그라미, 개별 삭제 버튼은 숨김 */
+.sm-check {
+    display: none;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border: 1.5px solid var(--sm-border);
+    border-radius: 50%;
+    background-color: var(--sm-field);
+    color: transparent;
+    font-size: 10px;
+    transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.sm-list.sm-selecting .sm-check {
+    display: flex;
+}
+
+.sm-list.sm-selecting .sm-dot,
+.sm-list.sm-selecting .sm-item-del {
+    display: none;
+}
+
+.sm-list.sm-selecting .sm-item-preview,
+.sm-list.sm-selecting .sm-item-date {
+    margin-left: 27px;
+}
+
+.sm-item.sm-checked {
+    border-color: var(--sm-accent);
+    background-color: var(--sm-card-hover);
+}
+
+.sm-item.sm-checked .sm-check {
+    border-color: var(--sm-accent);
+    background-color: var(--sm-accent);
+    color: var(--sm-accent-fg);
+}
+
+.sm-select-count {
+    white-space: nowrap;
+}
+
+#sm_panel .sm-foot-select .sm-delete-selected {
+    flex: 1 1 auto;
+}
+
+.sm-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex: 1 1 auto;
+    padding: 28px 12px;
+    border: 1px dashed var(--sm-border);
+    border-radius: 14px;
+    color: var(--sm-muted);
+    text-align: center;
+    word-break: keep-all;
+}
+
+.sm-empty i {
+    font-size: 26px;
+    color: var(--sm-accent);
+    margin-bottom: 4px;
+}
+
+.sm-empty p {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--sm-fg);
+}
+
+.sm-empty span {
+    font-size: 12px;
+}
+
+/* ============ 편집 ============ */
+/* 사용자 테마가 input·textarea 색을 !important 로 칠해도 메모장 테마가 이기도록 모두 고정한다. */
+#sm_panel .sm-title,
+#sm_panel .sm-text {
+    margin: 0;
+    color: var(--sm-fg) !important;
+    background-color: var(--sm-field) !important;
+    background-image: none !important;
+    border: 1px solid var(--sm-border) !important;
+    border-radius: 12px !important;
+    outline: none !important;
+    box-shadow: none !important;
+    caret-color: var(--sm-accent-ink);
+    font-family: inherit;
+}
+
+#sm_panel .sm-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 34px;
+    padding: 0 12px !important;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+#sm_panel .sm-text {
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 80px;
+    padding: 12px 14px !important;
+    font-size: 14px;
+    line-height: 1.8;
+    resize: none;
+}
+
+#sm_panel .sm-title:focus,
+#sm_panel .sm-text:focus {
+    outline: none !important;
+    border-color: var(--sm-accent) !important;
+    background-color: var(--sm-field) !important;
+    box-shadow: none !important;
+}
+
+#sm_panel .sm-title::placeholder,
+#sm_panel .sm-text::placeholder,
+#sm_panel .sm-search::placeholder {
+    color: var(--sm-muted);
+}
+
+/* ============ 꼬리말 ============ */
+.sm-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    flex: 0 0 auto;
+    gap: 6px 10px;
+    font-size: 11.5px;
+    color: var(--sm-muted);
+}
+
+.sm-foot-list {
+    justify-content: space-between;
+}
+
+.sm-foot-right {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 8px;
+}
+
+#sm_panel .sm-mini {
+    margin: 0;
+    padding: 3px 10px;
+    border: 1px solid var(--sm-border);
+    border-radius: 12px;
+    background-color: transparent;
+    color: var(--sm-muted);
+    font-family: inherit;
+    font-size: 11.5px;
+    line-height: 1.5;
+    cursor: pointer;
+}
+
+#sm_panel .sm-mini:hover {
+    color: var(--sm-fg);
+    background-color: var(--sm-accent-soft);
+}
+
+/* 더보기 메뉴 (휴지통 · 백업) */
+.sm-menu-wrap {
+    position: relative;
+    display: inline-flex;
+}
+
+#sm_panel .sm-menu-toggle {
+    width: 30px;
+    height: 30px;
+}
+
+.sm-menu {
+    position: absolute;
+    left: 0;
+    bottom: 36px;
+    z-index: 6;
+    min-width: 172px;
+    padding: 6px;
+    border: 1px solid var(--sm-border);
+    border-radius: 14px;
+    background-color: var(--sm-dialog-bg);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    animation: sm-pop 0.14s ease;
+}
+
+#sm_panel[data-sm-theme="auto"] .sm-menu {
+    backdrop-filter: blur(14px);
+}
+
+#sm_panel .sm-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    margin: 0;
+    padding: 9px 10px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--sm-fg);
+    font-family: inherit;
+    font-size: 13px;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+#sm_panel .sm-menu-item:hover {
+    background-color: var(--sm-accent-soft);
+}
+
+.sm-menu-item > i {
+    width: 15px;
+    text-align: center;
+    color: var(--sm-muted);
+}
+
+.sm-trash-count {
+    margin-left: auto;
+    padding: 1px 7px;
+    border-radius: 9px;
+    background-color: var(--sm-accent-soft);
+    color: var(--sm-accent-ink);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+/* 휴지통 */
+.sm-trash-item {
+    cursor: default;
+}
+
+.sm-trash-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 6px 0 0 15px;
+}
+
+.sm-trash-actions {
+    display: flex;
+    gap: 6px;
+}
+
+/* 테마 선택 — 보이는 글자와 화살표는 우리가 그리고, 진짜 select 는 투명하게 위에 덮는다.
+   select 모양을 테마가 바꿔도 글자와 화살표가 겹칠 수 없다. */
+.sm-theme-pill {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 30px;
+    padding: 0 12px 0 14px;
+    border: 1px solid var(--sm-border);
+    border-radius: 15px;
+    background-color: var(--sm-field);
+    color: var(--sm-fg);
+    font-size: 12.5px;
+    cursor: pointer;
+}
+
+.sm-theme-pill:focus-within {
+    border-color: var(--sm-accent);
+}
+
+.sm-theme-pill > i {
+    font-size: 10px;
+    color: var(--sm-muted);
+}
+
+#sm_panel .sm-theme {
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    opacity: 0;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+/* ============ 스크롤바 ============ */
+#sm_panel .sm-list,
+#sm_panel .sm-text {
+    scrollbar-width: thin;
+    scrollbar-color: var(--sm-scroll) transparent;
+}
+
+#sm_panel .sm-list::-webkit-scrollbar,
+#sm_panel .sm-text::-webkit-scrollbar {
+    width: 6px;
+}
+
+#sm_panel .sm-list::-webkit-scrollbar-track,
+#sm_panel .sm-text::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#sm_panel .sm-list::-webkit-scrollbar-thumb,
+#sm_panel .sm-text::-webkit-scrollbar-thumb {
+    border-radius: 3px;
+    background-color: var(--sm-scroll);
+}
+
+/* ============ 확인창 · 알림 ============ */
+.sm-dialog-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background-color: var(--sm-backdrop);
+    animation: sm-fade 0.15s ease;
+}
+
+.sm-dialog {
+    width: 100%;
+    max-width: 300px;
+    padding: 20px 18px 16px;
+    border: 1px solid var(--sm-border);
+    border-radius: 20px;
+    background-color: var(--sm-dialog-bg);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+    text-align: center;
+    animation: sm-pop 0.18s ease;
+}
+
+#sm_panel[data-sm-theme="auto"] .sm-dialog {
+    backdrop-filter: blur(14px);
+}
+
+.sm-dialog-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    margin: 0 auto 12px;
+    border-radius: 50%;
+    background-color: var(--sm-accent-soft);
+    color: var(--sm-accent-ink);
+    font-size: 18px;
+}
+
+.sm-dialog-title {
+    margin-bottom: 6px;
+    font-size: 15px;
+    font-weight: 700;
+    word-break: keep-all;
+}
+
+.sm-dialog-msg {
+    margin-bottom: 18px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--sm-muted);
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+
+.sm-dialog-actions {
+    display: flex;
+    gap: 8px;
+}
+
+#sm_panel .sm-dialog-actions .sm-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0 8px;
+}
+
+/* 알림: 확인창과 같은 카드, 버튼만 없음 */
+.sm-notice-backdrop {
+    cursor: pointer;
+}
+
+.sm-notice {
+    max-width: 240px;
+    padding-bottom: 20px;
+}
+
+.sm-notice .sm-dialog-title:last-child,
+.sm-notice .sm-dialog-msg:last-child {
+    margin-bottom: 0;
+}
+
+.sm-dialog-backdrop.sm-leaving {
+    animation: sm-fade-out 0.16s ease forwards;
+}
+
+@keyframes sm-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes sm-fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+@keyframes sm-pop {
+    from { opacity: 0; transform: scale(0.94); }
+    to { opacity: 1; transform: scale(1); }
+}
