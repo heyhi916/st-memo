@@ -15,6 +15,7 @@ const defaultSettings = {
     notes: [],
     trash: [],
     theme: 'auto',
+    keepSizeWithKeyboard: false,
     panel: {
         open: false,
         left: null,
@@ -35,6 +36,7 @@ let noticeTimer = null;
 let draftTimer = null;
 let dialogOpen = false;
 let draftChecked = false;
+let mobileGeometry = null;
 
 function makeId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -45,6 +47,9 @@ function getSettings() {
         extension_settings[MODULE_NAME] = structuredClone(defaultSettings);
     }
     const settings = extension_settings[MODULE_NAME];
+    if (typeof settings.keepSizeWithKeyboard !== 'boolean') {
+        settings.keepSizeWithKeyboard = false;
+    }
 
     if (!Array.isArray(settings.notes)) {
         settings.notes = [];
@@ -523,6 +528,7 @@ function render(source = null) {
     } else {
         renderEditor(source);
     }
+    applyPanelGeometry();
 }
 
 function focusEditor(selector) {
@@ -1059,19 +1065,43 @@ function applyPanelGeometry() {
     const viewHeight = window.innerHeight;
     const safeTop = getTopOffset() + EDGE;
 
+    const viewport = window.visualViewport;
+    const viewportTop = viewport?.offsetTop ?? 0;
+    const visibleBottom = Math.min(viewHeight, viewportTop + (viewport?.height ?? viewHeight));
+    const top = Math.max(safeTop, viewportTop + EDGE);
+    let compact = isMobile() && view === 'editor' && visibleBottom - top < 500;
+
     if (isMobile()) {
-        const bottom = getBottomLimit() - EDGE;
+        // 편집 공간이 좁을 때는 채팅 입력창 몫까지 메모 입력에 사용한다.
+        const bottom = (compact ? visibleBottom : Math.min(getBottomLimit(), visibleBottom)) - EDGE;
+        const orientation = window.screen?.orientation?.type ?? window.orientation ?? null;
+        const visualHeight = viewport?.height ?? viewHeight;
+        const reduced = mobileGeometry
+            && mobileGeometry.width === viewWidth
+            && mobileGeometry.orientation === orientation
+            && (viewHeight < mobileGeometry.viewHeight || visualHeight < mobileGeometry.visualHeight);
+        let geometry = { top, height: Math.max(0, bottom - top) };
+        // 옵션을 끈 상태에서도 키보드가 열리기 전 크기를 기억한다.
+        if (!reduced) {
+            mobileGeometry = { ...geometry, width: viewWidth, viewHeight, visualHeight, orientation, compact };
+        } else if (getSettings().keepSizeWithKeyboard) {
+            geometry = mobileGeometry;
+            compact = mobileGeometry.compact;
+        }
+        el.classList.toggle('sm-compact-editor', compact);
         el.classList.add('sm-mobile');
         el.style.left = `${EDGE}px`;
-        el.style.top = `${safeTop}px`;
+        el.style.top = `${geometry.top}px`;
         el.style.right = 'auto';
         el.style.bottom = 'auto';
         el.style.width = `${viewWidth - EDGE * 2}px`;
-        el.style.height = `${Math.max(200, bottom - safeTop)}px`;
+        el.style.height = `${geometry.height}px`;
         return;
     }
 
+    mobileGeometry = null;
     el.classList.remove('sm-mobile');
+    el.classList.remove('sm-compact-editor');
     const panel = getSettings().panel;
     const width = Math.min(panel.width, viewWidth - EDGE * 2);
     const height = Math.min(panel.height, viewHeight - safeTop - EDGE);
@@ -1238,6 +1268,10 @@ const panelHtml = `
                     </select>
                 </span>
             </div>
+            <label class="sm-keyboard-option" title="모바일에서 사용합니다. 켜면 메모장 아래쪽이 키보드에 가려질 수 있습니다.">
+                <input type="checkbox" class="sm-keep-keyboard-size">
+                <span>키보드가 열려도 메모장 크기 유지</span>
+            </label>
             <div class="sm-foot sm-foot-select sm-hidden">
                 <button type="button" class="sm-btn sm-btn-danger sm-delete-selected" disabled>
                     <i class="fa-solid fa-trash-can"></i> <span class="sm-delete-label">삭제</span>
@@ -1293,6 +1327,7 @@ jQuery(async () => {
     const settings = getSettings();
 
     $('body').append(panelHtml);
+    $('#sm_panel .sm-keep-keyboard-size').prop('checked', settings.keepSizeWithKeyboard);
     $('#extensionsMenu').append(menuButtonHtml);
 
     purgeExpiredTrash();
@@ -1337,6 +1372,12 @@ jQuery(async () => {
         }
         renderList();
         focusEditor('.sm-search');
+    });
+
+    $(document).on('change', '.sm-keep-keyboard-size', function () {
+        getSettings().keepSizeWithKeyboard = this.checked;
+        saveSettingsDebounced();
+        applyPanelGeometry();
     });
 
     $(document).on('change', '.sm-theme', function () {
@@ -1395,15 +1436,18 @@ jQuery(async () => {
     makeDraggable(panelEl, panelEl.querySelector('.sm-panel-header'));
     watchPanelResize(panelEl);
 
-    // 화면 회전이나 키보드 등장으로 크기가 바뀌면 다시 맞춘다.
+    // 키보드와 화면 회전에 맞춰 실제 보이는 영역에 배치한다.
     let viewportTimer = null;
-    window.addEventListener('resize', () => {
+    const onViewportResize = () => {
         if (panelEl.classList.contains('sm-hidden')) {
             return;
         }
         clearTimeout(viewportTimer);
         viewportTimer = setTimeout(applyPanelGeometry, 200);
-    });
+    };
+    window.addEventListener('resize', onViewportResize);
+    window.visualViewport?.addEventListener('resize', onViewportResize);
+    window.visualViewport?.addEventListener('scroll', onViewportResize);
 
     if (settings.panel.open) {
         setPanelOpen(true);

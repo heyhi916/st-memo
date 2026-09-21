@@ -120,6 +120,58 @@
     cursor: default;
 }
 
+/* 키보드 등으로 세로 공간이 좁아지면 본문에 공간을 우선 배분한다. */
+#sm_panel.sm-compact-editor {
+    padding: 6px;
+    gap: 4px;
+}
+
+#sm_panel.sm-compact-editor .sm-panel-header {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+}
+
+#sm_panel.sm-compact-editor .sm-panel-title {
+    display: none;
+}
+
+#sm_panel.sm-compact-editor .sm-view-editor {
+    gap: 4px;
+}
+
+#sm_panel.sm-compact-editor .sm-view-editor > .sm-head {
+    padding-right: 32px;
+    gap: 4px;
+}
+
+#sm_panel.sm-compact-editor .sm-text {
+    min-height: 0;
+    padding: 6px 8px !important;
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+#sm_panel.sm-compact-editor .sm-title {
+    font-size: 16px;
+}
+
+#sm_panel.sm-compact-editor .sm-view-editor > .sm-foot {
+    flex-wrap: nowrap;
+    gap: 4px;
+    overflow-x: auto;
+}
+
+#sm_panel.sm-compact-editor .sm-foot-right {
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+#sm_panel.sm-compact-editor .sm-status-save:empty {
+    display: none;
+}
+
 .sm-panel-header {
     display: flex;
     align-items: center;
@@ -572,6 +624,23 @@
 }
 
 /* ============ 꼬리말 ============ */
+.sm-keyboard-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    color: var(--sm-muted);
+    font-size: 12px;
+    cursor: pointer;
+}
+
+#sm_panel .sm-keyboard-option input {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+}
+
 .sm-foot {
     display: flex;
     align-items: center;
