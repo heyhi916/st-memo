@@ -540,9 +540,8 @@ function renderEditor(source = null) {
     const chars = [...text].length;
     const lines = text.length ? text.split('\n').length : 0;
     for (const el of document.querySelectorAll('.sm-status-count')) {
-        el.querySelector('.sm-status-chars').textContent = `${chars.toLocaleString()}자`;
-        el.querySelector('.sm-status-lines').textContent = `${lines.toLocaleString()}줄`;
-        el.title = `${chars.toLocaleString()}자 / ${lines.toLocaleString()}줄`;
+        el.textContent = `${chars.toLocaleString()}자 / ${lines.toLocaleString()}줄`;
+        el.title = el.textContent;
     }
     // 바뀐 게 없거나 비어 있으면 저장 버튼 자체를 막는다.
     for (const el of document.querySelectorAll('.sm-save')) {
@@ -552,6 +551,9 @@ function renderEditor(source = null) {
 }
 
 function render(source = null) {
+    if (view !== 'list' || selecting) {
+        setMoreMenuOpen(false);
+    }
     if (view !== 'trash') {
         resetTrashSelection();
     }
@@ -1134,6 +1136,7 @@ async function importBackup(file) {
 /* ---------- 선택 모드 ---------- */
 
 function setSelecting(on) {
+    setMoreMenuOpen(false);
     selecting = on;
     selected.clear();
     renderList();
@@ -1160,6 +1163,27 @@ function toggleSelectAll() {
         }
     }
     renderList();
+}
+
+/* ---------- 목록 더보기 ---------- */
+
+function setMoreMenuOpen(open, returnFocus = false) {
+    const toggle = document.getElementById('sm_more_toggle');
+    const menu = document.getElementById('sm_more_menu');
+    const panel = document.getElementById('sm_panel');
+    if (!toggle || !menu || !panel) {
+        return;
+    }
+    open = Boolean(open && view === 'list' && !selecting && !panel.classList.contains('sm-hidden'));
+    toggle.setAttribute('aria-expanded', String(open));
+    menu.classList.toggle('sm-hidden', !open);
+    if (open) {
+        // 메뉴는 버튼 위로 열고, 작은 창에서도 창 밖으로 잘리지 않게 내부 스크롤한다.
+        const availableHeight = toggle.getBoundingClientRect().top - panel.getBoundingClientRect().top - 20;
+        menu.style.maxHeight = `${Math.max(0, availableHeight)}px`;
+    } else if (returnFocus && !panel.classList.contains('sm-hidden') && view === 'list' && !selecting) {
+        toggle.focus();
+    }
 }
 
 /* ---------- 창 ---------- */
@@ -1247,6 +1271,7 @@ function refitPanel() {
 }
 
 function setPanelOpen(open) {
+    setMoreMenuOpen(false);
     const settings = getSettings();
     settings.panel.open = open;
     $('#sm_panel').toggleClass('sm-hidden', !open);
@@ -1364,16 +1389,21 @@ const panelHtml = `
             <div class="sm-list sm-note-list"></div>
             <div class="sm-foot sm-foot-list">
                 <span class="sm-foot-actions">
-                    <button type="button" class="sm-icon-btn sm-open-trash" title="휴지통">
-                        <i class="fa-solid fa-trash-can"></i>
-                        <span class="sm-trash-dot sm-hidden"></span>
+                    <button type="button" id="sm_more_toggle" class="sm-icon-btn sm-more-toggle" title="더보기" aria-label="메모 관리 더보기" aria-expanded="false" aria-controls="sm_more_menu">
+                        <i class="fa-solid fa-ellipsis" aria-hidden="true"></i>
+                        <span class="sm-trash-dot sm-hidden" aria-hidden="true"></span>
                     </button>
-                    <button type="button" class="sm-icon-btn sm-export" title="백업 내보내기">
-                        <i class="fa-solid fa-download"></i>
-                    </button>
-                    <button type="button" class="sm-icon-btn sm-import" title="백업 불러오기">
-                        <i class="fa-solid fa-file-import"></i>
-                    </button>
+                    <span id="sm_more_menu" class="sm-more-menu sm-hidden" role="group" aria-label="메모 관리">
+                        <button type="button" class="sm-more-item sm-open-trash" title="휴지통">
+                            <i class="fa-solid fa-trash-can" aria-hidden="true"></i> 휴지통
+                        </button>
+                        <button type="button" class="sm-more-item sm-export" title="백업 내보내기">
+                            <i class="fa-solid fa-download" aria-hidden="true"></i> 백업 내보내기
+                        </button>
+                        <button type="button" class="sm-more-item sm-import" title="백업 불러오기">
+                            <i class="fa-solid fa-file-import" aria-hidden="true"></i> 백업 불러오기
+                        </button>
+                    </span>
                 </span>
                 <span class="sm-theme-pill" title="테마">
                     <span class="sm-theme-label">자동</span>
@@ -1387,6 +1417,7 @@ const panelHtml = `
             </div>
             <label class="sm-keyboard-option" title="모바일에서 사용합니다. 켜면 메모장 아래쪽이 키보드에 가려질 수 있습니다.">
                 <input type="checkbox" class="sm-keep-keyboard-size">
+                <span class="sm-keyboard-check" aria-hidden="true"></span>
                 <span>키보드가 열려도 메모장 크기 유지</span>
             </label>
             <div class="sm-foot sm-foot-select sm-hidden">
@@ -1437,10 +1468,7 @@ const panelHtml = `
                 <span class="sm-editor-actions">
                     <button type="button" class="sm-mini sm-copy"><i class="fa-solid fa-copy"></i> 복사</button>
                     <button type="button" class="sm-mini sm-download"><i class="fa-solid fa-download"></i> 내보내기</button>
-                </span>
-                <span class="sm-status-count">
-                    <span class="sm-status-chars"></span>
-                    <span class="sm-status-lines"></span>
+                    <span class="sm-status-count"></span>
                 </span>
             </div>
         </div>
@@ -1540,6 +1568,23 @@ jQuery(async () => {
         }
     });
 
+    $(document).on('click', '.sm-more-toggle', function () {
+        setMoreMenuOpen(this.getAttribute('aria-expanded') !== 'true');
+    });
+    $(document).on('click', '.sm-more-item', () => setMoreMenuOpen(false, true));
+    $(document).on('click focusin', function (event) {
+        if (!event.target.closest?.('#sm_panel .sm-foot-actions')) {
+            setMoreMenuOpen(false);
+        }
+    });
+    $(document).on('keydown', function (event) {
+        if (event.key === 'Escape' && document.getElementById('sm_more_toggle')?.getAttribute('aria-expanded') === 'true') {
+            event.preventDefault();
+            event.stopPropagation();
+            setMoreMenuOpen(false, true);
+        }
+    });
+
     $(document).on('click', '.sm-add', newNote);
     $(document).on('click', '.sm-select-start', () => setSelecting(true));
     $(document).on('click', '.sm-select-cancel', () => setSelecting(false));
@@ -1588,6 +1633,7 @@ jQuery(async () => {
     // 키보드와 화면 회전에 맞춰 실제 보이는 영역에 배치한다.
     let viewportTimer = null;
     const onViewportResize = () => {
+        setMoreMenuOpen(false);
         if (panelEl.classList.contains('sm-hidden')) {
             return;
         }
