@@ -156,22 +156,6 @@
     font-size: 16px;
 }
 
-#sm_panel.sm-compact-editor .sm-view-editor > .sm-foot {
-    flex-wrap: nowrap;
-    gap: 4px;
-    overflow-x: auto;
-}
-
-#sm_panel.sm-compact-editor .sm-foot-right {
-    flex-wrap: nowrap;
-    flex-shrink: 0;
-    white-space: nowrap;
-}
-
-#sm_panel.sm-compact-editor .sm-status-save:empty {
-    display: none;
-}
-
 .sm-panel-header {
     display: flex;
     align-items: center;
@@ -607,6 +591,8 @@
     font-size: 14px;
     line-height: 1.8;
     resize: none;
+    /* 네이티브 스크롤바도 입력칸의 둥근 테두리 안에 표시한다. */
+    clip-path: inset(0 round 12px);
 }
 
 #sm_panel .sm-title:focus,
@@ -656,11 +642,45 @@
     justify-content: space-between;
 }
 
-.sm-foot-right {
+#sm_panel .sm-editor-foot {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 6px;
+}
+
+/* 양쪽 정보 길이에 관계없이 복사·내보내기는 가운데 자리를 유지한다. */
+#sm_panel .sm-editor-foot > .sm-status-save {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.sm-editor-actions {
+    grid-column: 2;
+    grid-row: 1;
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 6px 8px;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+#sm_panel .sm-status-count {
+    grid-column: 3;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    text-align: right;
+    line-height: 1.35;
+    font-variant-numeric: tabular-nums;
+}
+
+#sm_panel .sm-status-count > span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 #sm_panel .sm-mini {
@@ -743,6 +763,26 @@
 .sm-trash-actions {
     display: flex;
     gap: 6px;
+}
+
+#sm_panel .sm-trash-list.sm-selecting .sm-trash-actions {
+    display: none;
+}
+
+.sm-trash-list.sm-selecting .sm-trash-item {
+    cursor: pointer;
+}
+
+.sm-trash-list.sm-selecting .sm-trash-bottom {
+    margin-left: 27px;
+}
+
+.sm-trash-list.sm-selecting .sm-trash-bottom .sm-item-date {
+    margin-left: 0;
+}
+
+#sm_panel .sm-trash-foot-select .sm-restore-selected {
+    flex: 1 1 auto;
 }
 
 /* 테마 선택 — 보이는 글자와 화살표는 우리가 그리고, 진짜 select 는 투명하게 위에 덮는다.

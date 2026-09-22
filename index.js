@@ -31,6 +31,8 @@ let draft = null;
 let searchQuery = '';
 let selecting = false;
 const selected = new Set();
+let trashSelecting = false;
+const selectedTrash = new Set();
 let statusTimer = null;
 let noticeTimer = null;
 let draftTimer = null;
@@ -334,7 +336,7 @@ function renderList() {
     for (const el of document.querySelectorAll('.sm-search-clear')) {
         el.classList.toggle('sm-hidden', searchQuery === '');
     }
-    for (const el of document.querySelectorAll('.sm-head-normal, .sm-foot-list')) {
+    for (const el of document.querySelectorAll('.sm-head-normal, .sm-foot-list, .sm-keyboard-option')) {
         el.classList.toggle('sm-hidden', selecting);
     }
     for (const el of document.querySelectorAll('.sm-head-select, .sm-foot-select')) {
@@ -417,6 +419,16 @@ function renderList() {
 function renderTrash() {
     const settings = getSettings();
     const items = [...settings.trash].sort((a, b) => (b.deletedAt ?? 0) - (a.deletedAt ?? 0));
+    if (!items.length) {
+        resetTrashSelection();
+    }
+    const ids = new Set(items.map(note => note.id));
+    for (const id of [...selectedTrash]) {
+        if (!trashSelecting || !ids.has(id)) {
+            selectedTrash.delete(id);
+        }
+    }
+    const allSelected = items.length > 0 && items.every(note => selectedTrash.has(note.id));
 
     for (const el of document.querySelectorAll('.sm-trash-total')) {
         el.textContent = String(items.length);
@@ -424,9 +436,30 @@ function renderTrash() {
     for (const el of document.querySelectorAll('.sm-trash-empty-all')) {
         el.disabled = items.length === 0;
     }
+    for (const el of document.querySelectorAll('.sm-trash-head-normal, .sm-trash-foot-normal')) {
+        el.classList.toggle('sm-hidden', trashSelecting);
+    }
+    for (const el of document.querySelectorAll('.sm-trash-head-select, .sm-trash-foot-select')) {
+        el.classList.toggle('sm-hidden', !trashSelecting);
+    }
+    for (const el of document.querySelectorAll('.sm-trash-select-start')) {
+        el.classList.toggle('sm-hidden', !items.length);
+    }
+    for (const el of document.querySelectorAll('.sm-trash-select-count')) {
+        el.textContent = `${selectedTrash.size}개 선택`;
+    }
+    for (const el of document.querySelectorAll('.sm-trash-select-all')) {
+        el.textContent = allSelected ? '전체 해제' : '전체 선택';
+        el.disabled = !items.length;
+    }
+    for (const el of document.querySelectorAll('.sm-restore-selected')) {
+        el.disabled = selectedTrash.size === 0;
+        el.querySelector('.sm-restore-label').textContent = selectedTrash.size ? `${selectedTrash.size}개 복구` : '복구';
+    }
 
     for (const listEl of document.querySelectorAll('.sm-trash-list')) {
         listEl.textContent = '';
+        listEl.classList.toggle('sm-selecting', trashSelecting);
 
         if (!items.length) {
             listEl.append(makeEmpty('fa-trash-can', '휴지통이 비어 있습니다', `메모는 ${TRASH_DAYS}일 동안 보관됩니다`));
@@ -435,12 +468,18 @@ function renderTrash() {
 
         for (const note of items) {
             const item = document.createElement('div');
-            item.className = 'sm-item sm-trash-item';
+            item.className = 'sm-item sm-trash-item' + (selectedTrash.has(note.id) ? ' sm-checked' : '');
             item.dataset.id = note.id;
+            if (trashSelecting) {
+                item.setAttribute('role', 'checkbox');
+                item.setAttribute('aria-checked', String(selectedTrash.has(note.id)));
+                item.tabIndex = 0;
+            }
 
             const top = document.createElement('div');
             top.className = 'sm-item-top';
 
+            const check = makeIconSpan('sm-check', '', 'fa-check');
             const dot = document.createElement('span');
             dot.className = 'sm-dot';
 
@@ -448,7 +487,7 @@ function renderTrash() {
             title.className = 'sm-item-title';
             title.textContent = note.title || '제목 없음';
 
-            top.append(dot, title);
+            top.append(check, dot, title);
 
             const preview = document.createElement('div');
             preview.className = 'sm-item-preview';
@@ -501,7 +540,9 @@ function renderEditor(source = null) {
     const chars = [...text].length;
     const lines = text.length ? text.split('\n').length : 0;
     for (const el of document.querySelectorAll('.sm-status-count')) {
-        el.textContent = `${chars.toLocaleString()}자 / ${lines.toLocaleString()}줄`;
+        el.querySelector('.sm-status-chars').textContent = `${chars.toLocaleString()}자`;
+        el.querySelector('.sm-status-lines').textContent = `${lines.toLocaleString()}줄`;
+        el.title = `${chars.toLocaleString()}자 / ${lines.toLocaleString()}줄`;
     }
     // 바뀐 게 없거나 비어 있으면 저장 버튼 자체를 막는다.
     for (const el of document.querySelectorAll('.sm-save')) {
@@ -511,6 +552,9 @@ function renderEditor(source = null) {
 }
 
 function render(source = null) {
+    if (view !== 'trash') {
+        resetTrashSelection();
+    }
     for (const el of document.querySelectorAll('.sm-view-list')) {
         el.classList.toggle('sm-hidden', view !== 'list');
     }
@@ -861,6 +905,7 @@ async function deleteSelected() {
 function openTrash() {
     selecting = false;
     selected.clear();
+    resetTrashSelection();
     const removed = purgeExpiredTrash();
     view = 'trash';
     render();
@@ -869,18 +914,85 @@ function openTrash() {
     }
 }
 
-function restoreNote(id) {
-    const settings = getSettings();
-    const index = settings.trash.findIndex(item => item.id === id);
-    if (index === -1) {
+function resetTrashSelection() {
+    trashSelecting = false;
+    selectedTrash.clear();
+}
+
+function setTrashSelecting(on) {
+    resetTrashSelection();
+    trashSelecting = on && getSettings().trash.length > 0;
+    renderTrash();
+}
+
+function toggleTrashSelected(id) {
+    if (!trashSelecting || !getSettings().trash.some(note => note.id === id)) {
         return;
     }
-    const [note] = settings.trash.splice(index, 1);
-    delete note.deletedAt;
-    settings.notes.unshift(note);
-    saveSettingsDebounced();
+    if (selectedTrash.has(id)) {
+        selectedTrash.delete(id);
+    } else {
+        selectedTrash.add(id);
+    }
+    renderTrash();
+}
+
+function toggleTrashSelectAll() {
+    if (!trashSelecting) {
+        return;
+    }
+    const items = getSettings().trash;
+    const allSelected = items.length > 0 && items.every(note => selectedTrash.has(note.id));
+    selectedTrash.clear();
+    if (!allSelected) {
+        for (const note of items) {
+            selectedTrash.add(note.id);
+        }
+    }
+    renderTrash();
+}
+
+/** 선택한 메모만 옮긴다. 재호출하거나 같은 ID가 있어도 기존 메모를 덮어쓰지 않는다. */
+function restoreTrashed(ids) {
+    const settings = getSettings();
+    const existing = new Set(settings.notes.map(note => note.id));
+    const restored = [];
+    settings.trash = settings.trash.filter(note => {
+        if (!ids.has(note.id) || existing.has(note.id)) {
+            return true;
+        }
+        const recovered = { ...note };
+        delete recovered.deletedAt;
+        restored.push(recovered);
+        existing.add(note.id);
+        return false;
+    });
+    if (restored.length) {
+        settings.notes.unshift(...restored);
+        saveSettingsDebounced();
+    }
+    return restored;
+}
+
+function restoreNote(id) {
+    const [note] = restoreTrashed(new Set([id]));
+    if (!note) {
+        return;
+    }
     renderTrash();
     showNotice('fa-rotate-left', '복구했습니다', `"${note.title || '제목 없음'}"`);
+}
+
+function restoreSelectedTrash() {
+    if (!trashSelecting || !selectedTrash.size) {
+        return;
+    }
+    const restored = restoreTrashed(new Set(selectedTrash));
+    resetTrashSelection();
+    renderTrash();
+    if (restored.length) {
+        showNotice('fa-rotate-left', `${restored.length}개를 복구했습니다`);
+    }
 }
 
 async function purgeNote(id) {
@@ -1141,6 +1253,11 @@ function setPanelOpen(open) {
     if (open) {
         refitPanel();
         checkSavedDraft();
+    } else {
+        resetTrashSelection();
+        if (view === 'trash') {
+            renderTrash();
+        }
     }
     saveSettingsDebounced();
 }
@@ -1280,16 +1397,27 @@ const panelHtml = `
         </div>
 
         <div class="sm-view-trash sm-hidden">
-            <div class="sm-head">
+            <div class="sm-head sm-trash-head-normal">
                 <button type="button" class="sm-btn sm-btn-round sm-trash-back" title="목록으로">
                     <i class="fa-solid fa-arrow-left"></i>
                 </button>
                 <span class="sm-head-title">휴지통<span class="sm-count sm-trash-total">0</span></span>
+                <button type="button" class="sm-btn sm-btn-soft sm-trash-select-start" title="여러 개 골라서 복구">선택</button>
                 <button type="button" class="sm-btn sm-btn-danger sm-trash-empty-all" disabled>비우기</button>
             </div>
+            <div class="sm-head sm-trash-head-select sm-hidden">
+                <span class="sm-head-title"><span class="sm-trash-select-count">0개 선택</span></span>
+                <button type="button" class="sm-btn sm-btn-soft sm-trash-select-all">전체 선택</button>
+                <button type="button" class="sm-btn sm-btn-soft sm-trash-select-cancel">취소</button>
+            </div>
             <div class="sm-list sm-trash-list"></div>
-            <div class="sm-foot">
+            <div class="sm-foot sm-trash-foot-normal">
                 <span>${TRASH_DAYS}일 뒤 자동으로 지워집니다</span>
+            </div>
+            <div class="sm-foot sm-trash-foot-select sm-hidden">
+                <button type="button" class="sm-btn sm-btn-accent sm-restore-selected" disabled>
+                    <i class="fa-solid fa-rotate-left"></i> <span class="sm-restore-label">복구</span>
+                </button>
             </div>
         </div>
 
@@ -1304,12 +1432,15 @@ const panelHtml = `
                 </button>
             </div>
             <textarea class="sm-text" placeholder="내용"></textarea>
-            <div class="sm-foot">
+            <div class="sm-foot sm-editor-foot">
                 <span class="sm-status-save"></span>
-                <span class="sm-foot-right">
+                <span class="sm-editor-actions">
                     <button type="button" class="sm-mini sm-copy"><i class="fa-solid fa-copy"></i> 복사</button>
                     <button type="button" class="sm-mini sm-download"><i class="fa-solid fa-download"></i> 내보내기</button>
-                    <span class="sm-status-count"></span>
+                </span>
+                <span class="sm-status-count">
+                    <span class="sm-status-chars"></span>
+                    <span class="sm-status-lines"></span>
                 </span>
             </div>
         </div>
@@ -1389,7 +1520,9 @@ jQuery(async () => {
     $(document).on('click', '.sm-item', function (event) {
         const id = this.dataset.id;
         if (this.classList.contains('sm-trash-item')) {
-            if (event.target.closest('.sm-restore')) {
+            if (trashSelecting) {
+                toggleTrashSelected(id);
+            } else if (event.target.closest('.sm-restore')) {
                 restoreNote(id);
             } else if (event.target.closest('.sm-purge')) {
                 purgeNote(id);
@@ -1420,6 +1553,22 @@ jQuery(async () => {
     $(document).on('click', '.sm-export', exportBackup);
     $(document).on('click', '.sm-import', requestImport);
     $(document).on('click', '.sm-trash-back', () => { view = 'list'; render(); });
+    $(document).on('click', '.sm-trash-select-start', () => setTrashSelecting(true));
+    $(document).on('click', '.sm-trash-select-cancel', () => setTrashSelecting(false));
+    $(document).on('click', '.sm-trash-select-all', toggleTrashSelectAll);
+    $(document).on('click', '.sm-restore-selected', restoreSelectedTrash);
+    $(document).on('keydown', '.sm-trash-item', function (event) {
+        if (trashSelecting && (event.key === 'Enter' || event.key === ' ')) {
+            event.preventDefault();
+            const id = this.dataset.id;
+            toggleTrashSelected(id);
+            document.querySelectorAll('.sm-trash-item').forEach(item => {
+                if (item.dataset.id === id) {
+                    item.focus();
+                }
+            });
+        }
+    });
     $(document).on('click', '.sm-trash-empty-all', emptyTrash);
     $(document).on('click', '.sm-close', () => setPanelOpen(false));
     $('#sm_menu_button').on('click', () => setPanelOpen($('#sm_panel').hasClass('sm-hidden')));
