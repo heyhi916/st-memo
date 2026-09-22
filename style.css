@@ -752,7 +752,7 @@
     left: 0;
     display: flex;
     flex-direction: column;
-    width: 168px;
+    width: 220px;
     max-width: calc(100vw - 56px);
     padding: 4px;
     overflow-y: auto;
@@ -766,6 +766,34 @@
 
 #sm_panel .sm-more-menu.sm-hidden {
     display: none;
+}
+
+#sm_panel .sm-more-menu .sm-keyboard-option {
+    margin-top: 4px;
+    padding: 10px;
+    border-top: 1px solid var(--sm-border);
+    line-height: 1.5;
+    white-space: normal;
+}
+
+#sm_panel .sm-more-menu .sm-keyboard-option input {
+    left: 10px;
+}
+
+#sm_panel .sm-menu-icon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    color: var(--sm-muted);
+}
+
+#sm_panel .sm-menu-icon .sm-trash-dot {
+    top: -2px;
+    right: -3px;
 }
 
 #sm_panel .sm-more-item {

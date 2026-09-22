@@ -1395,7 +1395,10 @@ const panelHtml = `
                     </button>
                     <span id="sm_more_menu" class="sm-more-menu sm-hidden" role="group" aria-label="메모 관리">
                         <button type="button" class="sm-more-item sm-open-trash" title="휴지통">
-                            <i class="fa-solid fa-trash-can" aria-hidden="true"></i> 휴지통
+                            <span class="sm-menu-icon" aria-hidden="true">
+                                <i class="fa-solid fa-trash-can"></i>
+                                <span class="sm-trash-dot sm-hidden"></span>
+                            </span> 휴지통
                         </button>
                         <button type="button" class="sm-more-item sm-export" title="백업 내보내기">
                             <i class="fa-solid fa-download" aria-hidden="true"></i> 백업 내보내기
@@ -1403,6 +1406,11 @@ const panelHtml = `
                         <button type="button" class="sm-more-item sm-import" title="백업 불러오기">
                             <i class="fa-solid fa-file-import" aria-hidden="true"></i> 백업 불러오기
                         </button>
+                        <label class="sm-keyboard-option" title="모바일에서 사용합니다. 켜면 메모장 아래쪽이 키보드에 가려질 수 있습니다.">
+                            <input type="checkbox" class="sm-keep-keyboard-size">
+                            <span class="sm-keyboard-check" aria-hidden="true"></span>
+                            <span>키보드가 열려도 메모장 크기 유지</span>
+                        </label>
                     </span>
                 </span>
                 <span class="sm-theme-pill" title="테마">
@@ -1415,11 +1423,6 @@ const panelHtml = `
                     </select>
                 </span>
             </div>
-            <label class="sm-keyboard-option" title="모바일에서 사용합니다. 켜면 메모장 아래쪽이 키보드에 가려질 수 있습니다.">
-                <input type="checkbox" class="sm-keep-keyboard-size">
-                <span class="sm-keyboard-check" aria-hidden="true"></span>
-                <span>키보드가 열려도 메모장 크기 유지</span>
-            </label>
             <div class="sm-foot sm-foot-select sm-hidden">
                 <button type="button" class="sm-btn sm-btn-danger sm-delete-selected" disabled>
                     <i class="fa-solid fa-trash-can"></i> <span class="sm-delete-label">삭제</span>
