@@ -120,32 +120,6 @@
     cursor: default;
 }
 
-/* 키보드 등으로 세로 공간이 좁아지면 본문에 공간을 우선 배분한다. */
-#sm_panel.sm-compact-editor {
-    padding: 6px;
-    gap: 4px;
-}
-
-#sm_panel.sm-compact-editor .sm-panel-header {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-}
-
-#sm_panel.sm-compact-editor .sm-panel-title {
-    display: none;
-}
-
-#sm_panel.sm-compact-editor .sm-view-editor {
-    gap: 4px;
-}
-
-#sm_panel.sm-compact-editor .sm-view-editor > .sm-head {
-    padding-right: 32px;
-    gap: 4px;
-}
-
-
 .sm-panel-header {
     display: flex;
     align-items: center;
@@ -611,6 +585,30 @@
 
 #sm_panel.sm-mobile :is(.sm-search, .sm-title, .sm-text) {
     font-size: 16px !important;
+}
+
+/* 입력란의 계산 크기는 16px로 유지하고, 편집 화면 안쪽만 7/8로 표시한다. */
+#sm_panel.sm-mobile .sm-body {
+    position: relative;
+}
+
+#sm_panel.sm-mobile .sm-view-editor {
+    --sm-editor-scale: 0.875;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: calc(100% / var(--sm-editor-scale));
+    height: calc(100% / var(--sm-editor-scale));
+    transform: scale(var(--sm-editor-scale));
+    transform-origin: top left;
+}
+
+#sm_panel.sm-mobile:has(.sm-view-editor:not(.sm-hidden)) {
+    gap: 7px;
+}
+
+#sm_panel.sm-mobile:has(.sm-view-editor:not(.sm-hidden)) .sm-panel-title {
+    font-size: 12px;
 }
 
 /* 테두리와 스크롤 영역을 분리해 맨 위·아래에서도 막대가 모서리에 닿지 않게 한다. */

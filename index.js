@@ -1205,11 +1205,11 @@ function applyPanelGeometry() {
     const viewportTop = viewport?.offsetTop ?? 0;
     const visibleBottom = Math.min(viewHeight, viewportTop + (viewport?.height ?? viewHeight));
     const top = Math.max(safeTop, viewportTop + EDGE);
-    let compact = isMobile() && view === 'editor' && visibleBottom - top < 500;
 
     if (isMobile()) {
         // 편집 공간이 좁을 때는 채팅 입력창 몫까지 메모 입력에 사용한다.
-        const bottom = (compact ? visibleBottom : Math.min(getBottomLimit(), visibleBottom)) - EDGE;
+        const useFullHeight = view === 'editor' && visibleBottom - top < 500;
+        const bottom = (useFullHeight ? visibleBottom : Math.min(getBottomLimit(), visibleBottom)) - EDGE;
         const orientation = window.screen?.orientation?.type ?? window.orientation ?? null;
         const visualHeight = viewport?.height ?? viewHeight;
         const reduced = mobileGeometry
@@ -1219,12 +1219,10 @@ function applyPanelGeometry() {
         let geometry = { top, height: Math.max(0, bottom - top) };
         // 옵션을 끈 상태에서도 키보드가 열리기 전 크기를 기억한다.
         if (!reduced) {
-            mobileGeometry = { ...geometry, width: viewWidth, viewHeight, visualHeight, orientation, compact };
+            mobileGeometry = { ...geometry, width: viewWidth, viewHeight, visualHeight, orientation };
         } else if (getSettings().keepSizeWithKeyboard) {
             geometry = mobileGeometry;
-            compact = mobileGeometry.compact;
         }
-        el.classList.toggle('sm-compact-editor', compact);
         el.classList.add('sm-mobile');
         el.style.left = `${EDGE}px`;
         el.style.top = `${geometry.top}px`;
@@ -1237,7 +1235,6 @@ function applyPanelGeometry() {
 
     mobileGeometry = null;
     el.classList.remove('sm-mobile');
-    el.classList.remove('sm-compact-editor');
     const panel = getSettings().panel;
     const width = Math.min(panel.width, viewWidth - EDGE * 2);
     const height = Math.min(panel.height, viewHeight - safeTop - EDGE);
