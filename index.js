@@ -50,6 +50,11 @@ function groupName(value) {
     return typeof value === 'string' ? value.trim().slice(0, 80) : '';
 }
 
+function groupNameTaken(value, exceptId = null) {
+    const key = groupName(value).normalize('NFC');
+    return getSettings().groups.some(group => group.id !== exceptId && group.name.normalize('NFC') === key);
+}
+
 function cleanGroups(groups) {
     const unique = new Map();
     for (const group of Array.isArray(groups) ? groups : []) {
@@ -109,7 +114,7 @@ function getSettings() {
 
 function createMemoGroup(value) {
     const name = groupName(value);
-    if (!name) return null;
+    if (!name || groupNameTaken(name)) return null;
     const settings = getSettings();
     const group = { id: makeId(), name };
     settings.groups.push(group);
@@ -121,6 +126,8 @@ function renameMemoGroup(id, value) {
     const group = getSettings().groups.find(group => group.id === id);
     const name = groupName(value);
     if (!group || !name) return false;
+    if (group.name === name) return true;
+    if (groupNameTaken(name, id)) return false;
     group.name = name;
     saveSettingsDebounced();
     return true;
@@ -431,7 +438,7 @@ function renderList() {
     const allShownSelected = shown.length > 0 && shown.every(note => selected.has(note.id));
 
     for (const el of document.querySelectorAll('.sm-list-name')) el.textContent = group?.name ?? '내 메모';
-    for (const el of document.querySelectorAll('.sm-group-back, .sm-rename-group')) el.classList.toggle('sm-hidden', !group);
+    for (const el of document.querySelectorAll('.sm-group-back, .sm-rename-group, .sm-delete-group')) el.classList.toggle('sm-hidden', !group);
     for (const el of document.querySelectorAll('.sm-group-selected')) el.disabled = selected.size === 0;
     for (const el of document.querySelectorAll('.sm-extract-selected')) {
         el.classList.toggle('sm-hidden', !group);
@@ -483,7 +490,7 @@ function renderList() {
         if (!shown.length) {
             if (selecting || !groups.length) {
                 listEl.append(query ? makeEmpty('fa-magnifying-glass', '찾는 메모가 없습니다')
-                    : makeEmpty('fa-note-sticky', group ? '이 묶음에 메모가 없습니다' : '아직 메모가 없습니다', '+ 새 메모를 눌러 추가할 수 있습니다'));
+                    : makeEmpty('fa-note-sticky', group ? '이 그룹에 메모가 없습니다' : '아직 메모가 없습니다', '+ 새 메모를 눌러 추가할 수 있습니다'));
             }
             continue;
         }
@@ -1191,7 +1198,7 @@ function exportBackup() {
     const data = { app: 'st-memo', version: 2, exportedAt: new Date().toISOString(), groups: settings.groups, notes };
     const stamp = new Date().toISOString().slice(0, 10);
     downloadFile(`memo-backup-${stamp}.json`, JSON.stringify(data, null, 2), 'application/json');
-    showNotice('fa-download', '백업 파일을 저장했습니다', `메모 ${notes.length}개 · 묶음 ${settings.groups.length}개`);
+    showNotice('fa-download', '백업 파일을 저장했습니다', `메모 ${notes.length}개 · 그룹 ${settings.groups.length}개`);
 }
 
 function requestImport() {
@@ -1218,7 +1225,7 @@ async function importBackup(file) {
 
     const settings = getSettings();
     const incomingGroups = cleanGroups(data.groups);
-    // 같은 ID는 같은 묶음이다. 사용자가 이 기기에서 바꾼 이름은 유지한다.
+    // 같은 ID는 같은 그룹이다. 사용자가 이 기기에서 바꾼 이름은 유지한다.
     const groupIds = new Set(incomingGroups.map(group => group.id));
     const localGroupIds = new Set(settings.groups.map(group => group.id));
     const newGroups = incomingGroups.filter(group => !localGroupIds.has(group.id));
@@ -1249,7 +1256,7 @@ async function importBackup(file) {
         return;
     }
 
-    const summary = [fresh.length && `메모 ${fresh.length}개`, newGroups.length && `묶음 ${newGroups.length}개`].filter(Boolean).join(' · ');
+    const summary = [fresh.length && `메모 ${fresh.length}개`, newGroups.length && `그룹 ${newGroups.length}개`].filter(Boolean).join(' · ');
     const choice = await showDialog({
         icon: 'fa-file-import',
         title: `${summary}를 불러오시겠습니까?`,
@@ -1299,6 +1306,12 @@ function makeGroupNameInput(name = '') {
     return input;
 }
 
+function showDuplicateGroupName(name) {
+    return showDialog({ icon: 'fa-circle-info', title: '같은 이름의 그룹이 이미 있습니다',
+        message: `‘${groupName(name)}’ 대신 다른 이름을 입력해 주세요.`,
+        buttons: [{label: '확인', value: 'ok', kind: 'accent'}] });
+}
+
 async function groupSelectedMemos() {
     if (!selecting || !selected.size) return;
     const ids = [...selected];
@@ -1309,18 +1322,18 @@ async function groupSelectedMemos() {
     if (destinations.length) {
         choices.className = 'sm-group-choices';
         choices.setAttribute('role', 'group');
-        choices.setAttribute('aria-label', '보낼 묶음');
+        choices.setAttribute('aria-label', '보낼 그룹');
         form.append(choices);
     }
     const input = makeGroupNameInput();
-    const nameLabel = addGroupField(form, '새 묶음 이름', input);
+    const nameLabel = addGroupField(form, '새 그룹 이름', input);
     if (destinations.length) {
         for (const group of [null, ...destinations]) {
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'sm-group-choice';
             button.dataset.destination = group?.id ?? 'new';
-            button.textContent = group?.name ?? '새 묶음 만들기';
+            button.textContent = group?.name ?? '새 그룹 만들기';
             button.setAttribute('aria-pressed', String(group === null));
             button.addEventListener('click', () => {
                 destination = group;
@@ -1330,11 +1343,14 @@ async function groupSelectedMemos() {
             choices.append(button);
         }
     }
-    const choice = await showDialog({ icon: 'fa-folder', title: `메모 ${ids.length}개 묶기`, form,
+    const choice = await showDialog({ icon: 'fa-folder', title: `메모 ${ids.length}개를 그룹에 넣기`, form,
         buttons: [{label:'취소', value:'cancel', kind:'soft'}, {label:'확인', value:'ok', kind:'accent', submit:true}] });
     if (choice !== 'ok') return;
     const target = destination ?? createMemoGroup(input.value);
-    if (!target) return;
+    if (!target) {
+        if (groupNameTaken(input.value)) await showDuplicateGroupName(input.value);
+        return;
+    }
     moveMemosToGroup(ids, target.id);
     openMemoGroup(target.id);
 }
@@ -1350,10 +1366,47 @@ async function renameCurrentGroup() {
     if (!group) return;
     const form = makeGroupForm();
     const input = makeGroupNameInput(group.name);
-    addGroupField(form, '묶음 이름', input);
-    const choice = await showDialog({ icon:'fa-folder', title:'묶음 이름 변경', form,
+    addGroupField(form, '그룹 이름', input);
+    const choice = await showDialog({ icon:'fa-folder', title:'그룹 이름 변경', form,
         buttons:[{label:'취소', value:'cancel', kind:'soft'}, {label:'저장', value:'ok', kind:'accent', submit:true}] });
-    if (choice === 'ok' && renameMemoGroup(group.id, input.value)) renderList();
+    if (choice !== 'ok') return;
+    if (renameMemoGroup(group.id, input.value)) renderList();
+    else if (groupNameTaken(input.value, group.id)) await showDuplicateGroupName(input.value);
+}
+
+function deleteMemoGroup(id) {
+    const settings = getSettings();
+    const index = settings.groups.findIndex(group => group.id === id);
+    if (index === -1) return null;
+    const ids = new Set();
+    for (const note of settings.notes) {
+        if (note.groupId === id) {
+            ids.add(note.id);
+            delete note.groupId;
+        }
+    }
+    for (const note of settings.trash) {
+        if (note.groupId === id) delete note.groupId;
+    }
+    settings.groups.splice(index, 1);
+    return moveToTrash(ids);
+}
+
+async function deleteCurrentGroup() {
+    const settings = getSettings();
+    const group = settings.groups.find(item => item.id === activeGroupId);
+    if (!group) return;
+    const count = settings.notes.filter(note => note.groupId === group.id).length;
+    const choice = await showDialog({
+        icon: 'fa-trash-can', title: `‘${group.name}’ 그룹을 삭제할까요?`,
+        message: count ? `그룹 안의 메모 ${count}개도 휴지통으로 이동합니다.\n메모는 ${TRASH_DAYS}일 동안 복구할 수 있지만 그룹은 복구되지 않습니다.`
+            : '메모가 없는 빈 그룹입니다. 삭제한 그룹은 복구되지 않습니다.',
+        buttons: [{ label: '취소', value: 'cancel', kind: 'soft' }, { label: '그룹 삭제', value: 'delete', kind: 'danger' }],
+    });
+    if (choice !== 'delete') return;
+    const moved = deleteMemoGroup(group.id);
+    openMemoGroup(null);
+    if (moved !== null) showNotice('fa-trash-can', '그룹을 삭제했습니다', moved ? `메모 ${moved}개를 휴지통으로 옮겼습니다` : '');
 }
 
 function setSelecting(on) {
@@ -1614,7 +1667,8 @@ const panelHtml = `
                         <span class="sm-trash-dot sm-hidden" aria-hidden="true"></span>
                     </button>
                     <span id="sm_more_menu" class="sm-more-menu sm-hidden" role="group" aria-label="메모 관리">
-                        <button type="button" class="sm-more-item sm-rename-group sm-hidden"><i class="fa-solid fa-pen" aria-hidden="true"></i> 묶음 이름 변경</button>
+                        <button type="button" class="sm-more-item sm-rename-group sm-hidden"><i class="fa-solid fa-pen" aria-hidden="true"></i> 그룹 이름 변경</button>
+                        <button type="button" class="sm-more-item sm-delete-group sm-hidden"><i class="fa-solid fa-folder-minus" aria-hidden="true"></i> 그룹 삭제</button>
                         <button type="button" class="sm-more-item sm-open-trash" title="휴지통">
                             <span class="sm-menu-icon" aria-hidden="true">
                                 <i class="fa-solid fa-trash-can"></i>
@@ -1645,7 +1699,7 @@ const panelHtml = `
                 </span>
             </div>
             <div class="sm-foot sm-foot-select sm-hidden">
-                <button type="button" class="sm-btn sm-btn-accent sm-group-selected" disabled><i class="fa-solid fa-folder"></i> 묶기</button>
+                <button type="button" class="sm-btn sm-btn-accent sm-group-selected" disabled><i class="fa-solid fa-folder"></i> 그룹에 넣기</button>
                 <button type="button" class="sm-btn sm-btn-danger sm-delete-selected" disabled>
                     <i class="fa-solid fa-trash-can"></i> <span class="sm-delete-label">삭제</span>
                 </button>
@@ -1815,6 +1869,7 @@ jQuery(async () => {
     $(document).on('click', '.sm-group-selected', groupSelectedMemos);
     $(document).on('click', '.sm-extract-selected', extractSelectedMemos);
     $(document).on('click', '.sm-rename-group', renameCurrentGroup);
+    $(document).on('click', '.sm-delete-group', deleteCurrentGroup);
     $(document).on('click', '.sm-group-card', function () { openMemoGroup(this.dataset.groupId); });
     $(document).on('click', '.sm-group-back', () => openMemoGroup(null));
     $(document).on('click', '.sm-add', newNote);
