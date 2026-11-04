@@ -359,24 +359,37 @@
     background-color: var(--sm-card-hover);
 }
 
-#sm_panel .sm-group-card {
+#sm_panel .sm-group-row {
     display: flex;
     flex: 0 0 auto;
     align-items: center;
-    gap: 8px;
     width: 100%;
-    margin: 0;
-    padding: 10px 12px;
+    padding-right: 12px;
     border: 1px solid var(--sm-border);
     border-radius: 14px;
     background: var(--sm-card);
+}
+
+#sm_panel .sm-group-card {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 10px 8px 10px 12px;
+    border: 0;
+    border-radius: inherit;
+    background: transparent;
     color: var(--sm-fg);
     font: inherit;
     text-align: left;
     cursor: pointer;
 }
 
-#sm_panel .sm-group-card:hover { background: var(--sm-card-hover); }
+#sm_panel .sm-group-row:hover { background: var(--sm-card-hover); }
+#sm_panel .sm-delete-group { margin: 0; padding: 0; border: 0; background: transparent; cursor: pointer; }
+#sm_panel .sm-delete-group:hover { background: var(--sm-danger-soft); }
 .sm-group-icon { color: var(--sm-accent-ink); }
 .sm-list-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #sm_panel .sm-foot-select > .sm-btn { flex: 1 1 0; }

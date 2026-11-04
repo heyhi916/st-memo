@@ -402,6 +402,8 @@ function notesInList(query) {
 }
 
 function makeGroupCard(group, count) {
+    const row = document.createElement('div');
+    row.className = 'sm-group-row';
     const card = document.createElement('button');
     card.type = 'button';
     card.className = 'sm-group-card';
@@ -412,7 +414,15 @@ function makeGroupCard(group, count) {
     const badge = document.createElement('span');
     badge.textContent = `${count}개`;
     card.append(makeIconSpan('sm-group-icon', '', 'fa-folder'), name, badge, makeIconSpan('', '', 'fa-chevron-right'));
-    return card;
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'sm-item-del sm-delete-group';
+    remove.dataset.groupId = group.id;
+    remove.title = '그룹 삭제';
+    remove.setAttribute('aria-label', `${group.name} 그룹 삭제`);
+    remove.innerHTML = '<i class="fa-solid fa-xmark" aria-hidden="true"></i>';
+    row.append(card, remove);
+    return row;
 }
 
 function renderList() {
@@ -438,7 +448,7 @@ function renderList() {
     const allShownSelected = shown.length > 0 && shown.every(note => selected.has(note.id));
 
     for (const el of document.querySelectorAll('.sm-list-name')) el.textContent = group?.name ?? '내 메모';
-    for (const el of document.querySelectorAll('.sm-group-back, .sm-rename-group, .sm-delete-group')) el.classList.toggle('sm-hidden', !group);
+    for (const el of document.querySelectorAll('.sm-group-back, .sm-rename-group')) el.classList.toggle('sm-hidden', !group);
     for (const el of document.querySelectorAll('.sm-group-selected')) el.disabled = selected.size === 0;
     for (const el of document.querySelectorAll('.sm-extract-selected')) {
         el.classList.toggle('sm-hidden', !group);
@@ -1392,9 +1402,9 @@ function deleteMemoGroup(id) {
     return moveToTrash(ids);
 }
 
-async function deleteCurrentGroup() {
+async function deleteGroupFromList(id) {
     const settings = getSettings();
-    const group = settings.groups.find(item => item.id === activeGroupId);
+    const group = settings.groups.find(item => item.id === id);
     if (!group) return;
     const count = settings.notes.filter(note => note.groupId === group.id).length;
     const choice = await showDialog({
@@ -1405,7 +1415,7 @@ async function deleteCurrentGroup() {
     });
     if (choice !== 'delete') return;
     const moved = deleteMemoGroup(group.id);
-    openMemoGroup(null);
+    renderList();
     if (moved !== null) showNotice('fa-trash-can', '그룹을 삭제했습니다', moved ? `메모 ${moved}개를 휴지통으로 옮겼습니다` : '');
 }
 
@@ -1668,7 +1678,6 @@ const panelHtml = `
                     </button>
                     <span id="sm_more_menu" class="sm-more-menu sm-hidden" role="group" aria-label="메모 관리">
                         <button type="button" class="sm-more-item sm-rename-group sm-hidden"><i class="fa-solid fa-pen" aria-hidden="true"></i> 그룹 이름 변경</button>
-                        <button type="button" class="sm-more-item sm-delete-group sm-hidden"><i class="fa-solid fa-folder-minus" aria-hidden="true"></i> 그룹 삭제</button>
                         <button type="button" class="sm-more-item sm-open-trash" title="휴지통">
                             <span class="sm-menu-icon" aria-hidden="true">
                                 <i class="fa-solid fa-trash-can"></i>
@@ -1869,7 +1878,7 @@ jQuery(async () => {
     $(document).on('click', '.sm-group-selected', groupSelectedMemos);
     $(document).on('click', '.sm-extract-selected', extractSelectedMemos);
     $(document).on('click', '.sm-rename-group', renameCurrentGroup);
-    $(document).on('click', '.sm-delete-group', deleteCurrentGroup);
+    $(document).on('click', '.sm-delete-group', function () { deleteGroupFromList(this.dataset.groupId); });
     $(document).on('click', '.sm-group-card', function () { openMemoGroup(this.dataset.groupId); });
     $(document).on('click', '.sm-group-back', () => openMemoGroup(null));
     $(document).on('click', '.sm-add', newNote);
