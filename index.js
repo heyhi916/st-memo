@@ -1465,7 +1465,9 @@ const panelHtml = `
                     <i class="fa-solid fa-check"></i> 저장
                 </button>
             </div>
-            <textarea class="sm-text" placeholder="내용"></textarea>
+            <label class="sm-text-frame">
+                <textarea class="sm-text" aria-label="메모 내용" placeholder="내용"></textarea>
+            </label>
             <div class="sm-foot sm-editor-foot">
                 <span class="sm-status-save"></span>
                 <span class="sm-editor-actions">

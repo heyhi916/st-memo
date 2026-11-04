@@ -145,16 +145,6 @@
     gap: 4px;
 }
 
-#sm_panel.sm-compact-editor .sm-text {
-    min-height: 0;
-    padding: 6px 8px !important;
-    font-size: 16px;
-    line-height: 1.5;
-}
-
-#sm_panel.sm-compact-editor .sm-title {
-    font-size: 16px;
-}
 
 .sm-panel-header {
     display: flex;
@@ -607,6 +597,51 @@
 #sm_panel .sm-text::placeholder,
 #sm_panel .sm-search::placeholder {
     color: var(--sm-muted);
+}
+
+.sm-text-frame {
+    display: contents;
+}
+
+/* 모바일 입력란은 포커스 전부터 같은 크기여야 키보드 전환 때 확대되지 않는다. */
+#sm_panel.sm-mobile {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+#sm_panel.sm-mobile :is(.sm-search, .sm-title, .sm-text) {
+    font-size: 16px !important;
+}
+
+/* 테두리와 스크롤 영역을 분리해 맨 위·아래에서도 막대가 모서리에 닿지 않게 한다. */
+#sm_panel.sm-mobile .sm-text-frame {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    margin: 0;
+    padding: 8px 4px;
+    border: 1px solid var(--sm-border);
+    border-radius: 12px;
+    background-color: var(--sm-field);
+    overflow: hidden;
+    cursor: text;
+}
+
+#sm_panel.sm-mobile .sm-text-frame:focus-within {
+    border-color: var(--sm-accent);
+}
+
+#sm_panel.sm-mobile .sm-text-frame > .sm-text {
+    flex: 1 1 0;
+    min-height: 0;
+    padding: 0 6px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background-color: transparent !important;
+    clip-path: none;
+    overflow-y: auto;
+    line-height: 1.5;
 }
 
 /* ============ 꼬리말 ============ */
