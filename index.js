@@ -433,6 +433,10 @@ function renderList() {
     for (const el of document.querySelectorAll('.sm-list-name')) el.textContent = group?.name ?? '내 메모';
     for (const el of document.querySelectorAll('.sm-group-back, .sm-rename-group')) el.classList.toggle('sm-hidden', !group);
     for (const el of document.querySelectorAll('.sm-group-selected')) el.disabled = selected.size === 0;
+    for (const el of document.querySelectorAll('.sm-extract-selected')) {
+        el.classList.toggle('sm-hidden', !group);
+        el.disabled = selected.size === 0;
+    }
     for (const el of document.querySelectorAll('.sm-view-list .sm-count')) {
         el.textContent = query ? `${shown.length} / ${total}` : String(group ? total : settings.notes.length);
     }
@@ -820,7 +824,7 @@ function showDialog({ icon, title, message, buttons, form }) {
         }
         backdrop.append(box);
         panelEl.append(backdrop);
-        form?.querySelector('select, input:not(:disabled)')?.focus();
+        form?.querySelector('.sm-group-choice[aria-pressed="true"], input:not(:disabled)')?.focus();
     });
 }
 
@@ -1288,7 +1292,6 @@ function addGroupField(form, caption, control) {
 function makeGroupNameInput(name = '') {
     const input = document.createElement('input');
     input.type = 'text';
-    input.placeholder = '예: 여행 메모';
     input.required = true;
     input.pattern = '.*\\S.*';
     input.maxLength = 80;
@@ -1300,31 +1303,46 @@ async function groupSelectedMemos() {
     if (!selecting || !selected.size) return;
     const ids = [...selected];
     const form = makeGroupForm();
-    const select = document.createElement('select');
-    select.add(new Option('새 묶음 만들기', 'new'));
-    for (const group of getSettings().groups) {
-        if (group.id !== activeGroupId) select.add(new Option(group.name, `group:${group.id}`));
+    const destinations = getSettings().groups.filter(group => group.id !== activeGroupId);
+    let destination = null;
+    const choices = document.createElement('div');
+    if (destinations.length) {
+        choices.className = 'sm-group-choices';
+        choices.setAttribute('role', 'group');
+        choices.setAttribute('aria-label', '보낼 묶음');
+        form.append(choices);
     }
-    if (activeGroupId !== null) select.add(new Option('내 메모로 꺼내기', 'loose'));
-    if (select.options.length > 1) addGroupField(form, '보낼 곳', select);
     const input = makeGroupNameInput();
     const nameLabel = addGroupField(form, '새 묶음 이름', input);
-    select.addEventListener('change', () => {
-        nameLabel.hidden = input.disabled = select.value !== 'new';
-    });
+    if (destinations.length) {
+        for (const group of [null, ...destinations]) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'sm-group-choice';
+            button.dataset.destination = group?.id ?? 'new';
+            button.textContent = group?.name ?? '새 묶음 만들기';
+            button.setAttribute('aria-pressed', String(group === null));
+            button.addEventListener('click', () => {
+                destination = group;
+                for (const other of choices.children) other.setAttribute('aria-pressed', String(other === button));
+                nameLabel.hidden = input.disabled = destination !== null;
+            });
+            choices.append(button);
+        }
+    }
     const choice = await showDialog({ icon: 'fa-folder', title: `메모 ${ids.length}개 묶기`, form,
         buttons: [{label:'취소', value:'cancel', kind:'soft'}, {label:'확인', value:'ok', kind:'accent', submit:true}] });
     if (choice !== 'ok') return;
-    let id = null;
-    if (select.value === 'new') {
-        const group = createMemoGroup(input.value);
-        if (!group) return;
-        id = group.id;
-    } else if (select.value !== 'loose') {
-        id = select.value.slice('group:'.length);
-    }
-    moveMemosToGroup(ids, id);
-    openMemoGroup(id);
+    const target = destination ?? createMemoGroup(input.value);
+    if (!target) return;
+    moveMemosToGroup(ids, target.id);
+    openMemoGroup(target.id);
+}
+
+function extractSelectedMemos() {
+    if (activeGroupId === null || !selecting || !selected.size) return;
+    const ids = getSettings().notes.filter(note => note.groupId === activeGroupId && selected.has(note.id)).map(note => note.id);
+    if (moveMemosToGroup(ids, null)) openMemoGroup(null);
 }
 
 async function renameCurrentGroup() {
@@ -1577,6 +1595,7 @@ const panelHtml = `
             </div>
             <div class="sm-head sm-head-select sm-hidden">
                 <span class="sm-head-title"><span class="sm-select-count">0개 선택</span></span>
+                <button type="button" class="sm-btn sm-btn-soft sm-extract-selected sm-hidden" title="선택한 메모를 내 메모로 꺼내기" disabled>꺼내기</button>
                 <button type="button" class="sm-btn sm-btn-soft sm-select-all">전체 선택</button>
                 <button type="button" class="sm-btn sm-btn-soft sm-select-cancel">취소</button>
             </div>
@@ -1794,6 +1813,7 @@ jQuery(async () => {
     });
 
     $(document).on('click', '.sm-group-selected', groupSelectedMemos);
+    $(document).on('click', '.sm-extract-selected', extractSelectedMemos);
     $(document).on('click', '.sm-rename-group', renameCurrentGroup);
     $(document).on('click', '.sm-group-card', function () { openMemoGroup(this.dataset.groupId); });
     $(document).on('click', '.sm-group-back', () => openMemoGroup(null));
