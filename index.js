@@ -14,6 +14,7 @@ const DRAFT_KEY = 'st_memo_draft';
 const defaultSettings = {
     notes: [],
     trash: [],
+    groups: [],
     theme: 'auto',
     keepSizeWithKeyboard: false,
     panel: {
@@ -29,6 +30,7 @@ const defaultSettings = {
 let view = 'list';
 let draft = null;
 let searchQuery = '';
+let activeGroupId = null;
 let selecting = false;
 const selected = new Set();
 let trashSelecting = false;
@@ -44,6 +46,23 @@ function makeId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
+function groupName(value) {
+    return typeof value === 'string' ? value.trim().slice(0, 80) : '';
+}
+
+function cleanGroups(groups) {
+    const unique = new Map();
+    for (const group of Array.isArray(groups) ? groups : []) {
+        const name = groupName(group?.name);
+        if (name && typeof group.id === 'string' && group.id && !unique.has(group.id)) {
+            unique.set(group.id, { id: group.id, name });
+        }
+    }
+    return [...unique.values()];
+}
+
+let initializedGroupsFor = null;
+
 function getSettings() {
     if (!extension_settings[MODULE_NAME]) {
         extension_settings[MODULE_NAME] = structuredClone(defaultSettings);
@@ -58,6 +77,16 @@ function getSettings() {
     }
     if (!Array.isArray(settings.trash)) {
         settings.trash = [];
+    }
+    if (initializedGroupsFor !== settings) {
+        settings.groups = cleanGroups(settings.groups);
+        const groupIds = new Set(settings.groups.map(group => group.id));
+        for (const note of [...settings.notes, ...settings.trash]) {
+            if (note && typeof note === 'object' && 'groupId' in note && !groupIds.has(note.groupId)) {
+                delete note.groupId;
+            }
+        }
+        initializedGroupsFor = settings;
     }
     if (!THEMES.includes(settings.theme)) {
         settings.theme = 'auto';
@@ -76,6 +105,40 @@ function getSettings() {
     delete settings.activeId;
 
     return settings;
+}
+
+function createMemoGroup(value) {
+    const name = groupName(value);
+    if (!name) return null;
+    const settings = getSettings();
+    const group = { id: makeId(), name };
+    settings.groups.push(group);
+    saveSettingsDebounced();
+    return group;
+}
+
+function renameMemoGroup(id, value) {
+    const group = getSettings().groups.find(group => group.id === id);
+    const name = groupName(value);
+    if (!group || !name) return false;
+    group.name = name;
+    saveSettingsDebounced();
+    return true;
+}
+
+function moveMemosToGroup(ids, groupId) {
+    const settings = getSettings();
+    if (groupId !== null && !settings.groups.some(group => group.id === groupId)) return 0;
+    const selectedIds = new Set(ids);
+    let moved = 0;
+    for (const note of settings.notes) {
+        if (!selectedIds.has(note.id) || (note.groupId ?? null) === groupId) continue;
+        if (groupId === null) delete note.groupId;
+        else note.groupId = groupId;
+        moved++;
+    }
+    if (moved) saveSettingsDebounced();
+    return moved;
 }
 
 /** 휴지통에서 30일 지난 메모를 지운다. @returns {number} 지운 개수 */
@@ -249,8 +312,11 @@ async function checkSavedDraft() {
     }
 
     const note = getSettings().notes.find(item => item.id === saved.id);
+    activeGroupId = (note ? note.groupId : saved.groupId) ?? null;
+    if (!getSettings().groups.some(group => group.id === activeGroupId)) activeGroupId = null;
     draft = {
         id: saved.id ?? makeId(),
+        groupId: activeGroupId,
         title: saved.title,
         text: saved.text,
         baseTitle: note ? note.title : (saved.baseTitle ?? ''),
@@ -311,12 +377,46 @@ function makeIconSpan(className, title, icon) {
     return el;
 }
 
+function openMemoGroup(id) {
+    if (id !== null && !getSettings().groups.some(group => group.id === id)) return;
+    activeGroupId = id;
+    selecting = false;
+    selected.clear();
+    searchQuery = '';
+    for (const input of document.querySelectorAll('.sm-search')) input.value = '';
+    setMoreMenuOpen(false);
+    view = 'list';
+    render();
+}
+
+function notesInList(query) {
+    return getSortedNotes().filter(note => activeGroupId !== null
+        ? note.groupId === activeGroupId : Boolean(query) || !note.groupId);
+}
+
+function makeGroupCard(group, count) {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'sm-group-card';
+    card.dataset.groupId = group.id;
+    const name = document.createElement('span');
+    name.className = 'sm-item-title';
+    name.textContent = group.name;
+    const badge = document.createElement('span');
+    badge.textContent = `${count}개`;
+    card.append(makeIconSpan('sm-group-icon', '', 'fa-folder'), name, badge, makeIconSpan('', '', 'fa-chevron-right'));
+    return card;
+}
+
 function renderList() {
     const settings = getSettings();
-    const total = settings.notes.length;
+    const group = settings.groups.find(item => item.id === activeGroupId);
+    if (!group) activeGroupId = null;
     const query = normalizeQuery(searchQuery);
-    const sorted = getSortedNotes();
+    const sorted = notesInList(query);
+    const total = sorted.length;
     const shown = query ? sorted.filter(note => matchesQuery(note, query)) : sorted;
+    const groups = group ? [] : settings.groups.filter(item => !query || item.name.toLowerCase().includes(query));
 
     if (selecting && !total) {
         selecting = false;
@@ -330,8 +430,11 @@ function renderList() {
     }
     const allShownSelected = shown.length > 0 && shown.every(note => selected.has(note.id));
 
-    for (const el of document.querySelectorAll('.sm-count')) {
-        el.textContent = query ? `${shown.length} / ${total}` : String(total);
+    for (const el of document.querySelectorAll('.sm-list-name')) el.textContent = group?.name ?? '내 메모';
+    for (const el of document.querySelectorAll('.sm-group-back, .sm-rename-group')) el.classList.toggle('sm-hidden', !group);
+    for (const el of document.querySelectorAll('.sm-group-selected')) el.disabled = selected.size === 0;
+    for (const el of document.querySelectorAll('.sm-view-list .sm-count')) {
+        el.textContent = query ? `${shown.length} / ${total}` : String(group ? total : settings.notes.length);
     }
     for (const el of document.querySelectorAll('.sm-search-clear')) {
         el.classList.toggle('sm-hidden', searchQuery === '');
@@ -343,7 +446,7 @@ function renderList() {
         el.classList.toggle('sm-hidden', !selecting);
     }
     for (const el of document.querySelectorAll('.sm-select-start')) {
-        el.classList.toggle('sm-hidden', !total);
+        el.classList.toggle('sm-hidden', !shown.length);
     }
     for (const el of document.querySelectorAll('.sm-select-count')) {
         el.textContent = `${selected.size}개 선택`;
@@ -368,12 +471,16 @@ function renderList() {
         listEl.textContent = '';
         listEl.classList.toggle('sm-selecting', selecting);
 
-        if (!total) {
-            listEl.append(makeEmpty('fa-note-sticky', '아직 메모가 없습니다', '+ 새 메모를 눌러 추가할 수 있습니다'));
-            continue;
+        if (!selecting && groups.length) {
+            const counts = new Map();
+            for (const note of settings.notes) counts.set(note.groupId, (counts.get(note.groupId) ?? 0) + 1);
+            for (const item of groups) listEl.append(makeGroupCard(item, counts.get(item.id) ?? 0));
         }
         if (!shown.length) {
-            listEl.append(makeEmpty('fa-magnifying-glass', '찾는 메모가 없습니다'));
+            if (selecting || !groups.length) {
+                listEl.append(query ? makeEmpty('fa-magnifying-glass', '찾는 메모가 없습니다')
+                    : makeEmpty('fa-note-sticky', group ? '이 묶음에 메모가 없습니다' : '아직 메모가 없습니다', '+ 새 메모를 눌러 추가할 수 있습니다'));
+            }
             continue;
         }
 
@@ -647,10 +754,10 @@ function showNotice(icon, title, message = '') {
 
 /**
  * 창 안에 뜨는 확인 대화상자.
- * @param {{icon: string, title: string, message: string, buttons: {label: string, value: string, kind: string}[]}} options
+ * @param {{icon: string, title: string, message?: string, form?: HTMLFormElement, buttons: {label: string, value: string, kind: string, submit?: boolean}[]}} options
  * @returns {Promise<string|null>} 누른 버튼의 value, 바깥을 누르거나 Esc 면 null
  */
-function showDialog({ icon, title, message, buttons }) {
+function showDialog({ icon, title, message, buttons, form }) {
     const panelEl = document.getElementById('sm_panel');
     if (!panelEl || dialogOpen) {
         return Promise.resolve(null);
@@ -663,13 +770,14 @@ function showDialog({ icon, title, message, buttons }) {
         backdrop.className = 'sm-dialog-backdrop';
 
         const box = makeCard('sm-dialog', icon, title, message);
-        box.setAttribute('role', 'alertdialog');
+        box.setAttribute('role', form ? 'dialog' : 'alertdialog');
+        box.setAttribute('aria-label', title);
 
         const actions = document.createElement('div');
         actions.className = 'sm-dialog-actions';
 
         const onKey = (event) => {
-            if (event.key === 'Escape') {
+            if (event.key === 'Escape' && !event.isComposing) {
                 event.stopPropagation();
                 close(null);
             }
@@ -683,10 +791,17 @@ function showDialog({ icon, title, message, buttons }) {
 
         for (const button of buttons) {
             const el = document.createElement('button');
-            el.type = 'button';
+            el.type = form && button.submit ? 'submit' : 'button';
             el.className = `sm-btn sm-btn-${button.kind}`;
             el.textContent = button.label;
-            el.addEventListener('click', () => close(button.value));
+            if (el.type === 'submit') {
+                form.addEventListener('submit', (event) => {
+                    event.preventDefault();
+                    close(button.value);
+                });
+            } else {
+                el.addEventListener('click', () => close(button.value));
+            }
             actions.append(el);
         }
 
@@ -697,9 +812,15 @@ function showDialog({ icon, title, message, buttons }) {
         });
         document.addEventListener('keydown', onKey, true);
 
-        box.append(actions);
+        if (form) {
+            form.append(actions);
+            box.append(form);
+        } else {
+            box.append(actions);
+        }
         backdrop.append(box);
         panelEl.append(backdrop);
+        form?.querySelector('select, input:not(:disabled)')?.focus();
     });
 }
 
@@ -721,7 +842,7 @@ function openNote(id) {
 function newNote() {
     selecting = false;
     selected.clear();
-    draft = { id: makeId(), title: '', text: '', baseTitle: '', baseText: '' };
+    draft = { id: makeId(), groupId: activeGroupId, title: '', text: '', baseTitle: '', baseText: '' };
     view = 'editor';
     render();
     focusEditor('.sm-title');
@@ -783,6 +904,7 @@ function saveDraft() {
         note.updatedAt = Date.now();
     } else {
         note = { id: draft.id, title, text: draft.text, updatedAt: Date.now(), pinned: false };
+        if (draft.groupId && settings.groups.some(group => group.id === draft.groupId)) note.groupId = draft.groupId;
         settings.notes.unshift(note);
     }
 
@@ -1049,21 +1171,23 @@ async function emptyTrash() {
 /* ---------- 백업 ---------- */
 
 function exportBackup() {
-    const notes = getSettings().notes.map(note => ({
+    const settings = getSettings();
+    const notes = settings.notes.map(note => ({
         id: note.id,
         title: note.title,
         text: note.text,
         updatedAt: note.updatedAt,
         pinned: !!note.pinned,
+        ...(note.groupId ? { groupId: note.groupId } : {}),
     }));
-    if (!notes.length) {
+    if (!notes.length && !settings.groups.length) {
         showNotice('fa-circle-info', '내보낼 메모가 없습니다');
         return;
     }
-    const data = { app: 'st-memo', version: 1, exportedAt: new Date().toISOString(), notes };
+    const data = { app: 'st-memo', version: 2, exportedAt: new Date().toISOString(), groups: settings.groups, notes };
     const stamp = new Date().toISOString().slice(0, 10);
     downloadFile(`memo-backup-${stamp}.json`, JSON.stringify(data, null, 2), 'application/json');
-    showNotice('fa-download', '백업 파일을 저장했습니다', `메모 ${notes.length}개`);
+    showNotice('fa-download', '백업 파일을 저장했습니다', `메모 ${notes.length}개 · 묶음 ${settings.groups.length}개`);
 }
 
 function requestImport() {
@@ -1089,6 +1213,11 @@ async function importBackup(file) {
     }
 
     const settings = getSettings();
+    const incomingGroups = cleanGroups(data.groups);
+    // 같은 ID는 같은 묶음이다. 사용자가 이 기기에서 바꾼 이름은 유지한다.
+    const groupIds = new Set(incomingGroups.map(group => group.id));
+    const localGroupIds = new Set(settings.groups.map(group => group.id));
+    const newGroups = incomingGroups.filter(group => !localGroupIds.has(group.id));
     const taken = new Set([...settings.notes, ...settings.trash].map(note => note.id));
     const cleaned = incoming
         .filter(note => note && typeof note.title === 'string' && typeof note.text === 'string')
@@ -1098,22 +1227,28 @@ async function importBackup(file) {
             text: note.text,
             updatedAt: Number.isFinite(note.updatedAt) ? note.updatedAt : Date.now(),
             pinned: !!note.pinned,
+            ...(groupIds.has(note.groupId) ? { groupId: note.groupId } : {}),
         }));
-    const fresh = cleaned.filter(note => !taken.has(note.id));
+    const fresh = cleaned.filter(note => {
+        if (taken.has(note.id)) return false;
+        taken.add(note.id);
+        return true;
+    });
     const skipped = cleaned.length - fresh.length;
 
-    if (!cleaned.length) {
+    if (!cleaned.length && !incomingGroups.length) {
         showNotice('fa-circle-exclamation', '불러올 메모가 없습니다');
         return;
     }
-    if (!fresh.length) {
+    if (!fresh.length && !newGroups.length) {
         showNotice('fa-circle-info', '새로 불러올 메모가 없습니다');
         return;
     }
 
+    const summary = [fresh.length && `메모 ${fresh.length}개`, newGroups.length && `묶음 ${newGroups.length}개`].filter(Boolean).join(' · ');
     const choice = await showDialog({
         icon: 'fa-file-import',
-        title: `메모 ${fresh.length}개를 불러오시겠습니까?`,
+        title: `${summary}를 불러오시겠습니까?`,
         message: skipped
             ? '이미 있는 메모 제외'
             : '',
@@ -1126,14 +1261,82 @@ async function importBackup(file) {
         return;
     }
 
+    settings.groups.push(...newGroups);
     settings.notes.push(...fresh);
     saveSettingsDebounced();
     view = 'list';
     render();
-    showNotice('fa-file-import', `메모 ${fresh.length}개를 불러왔습니다`, skipped ? '이미 있는 메모 제외' : '');
+    showNotice('fa-file-import', `${summary}를 불러왔습니다`, skipped ? '이미 있는 메모 제외' : '');
 }
 
 /* ---------- 선택 모드 ---------- */
+
+function makeGroupForm() {
+    const form = document.createElement('form');
+    form.className = 'sm-group-form';
+    return form;
+}
+
+function addGroupField(form, caption, control) {
+    const label = document.createElement('label');
+    label.className = 'sm-group-field';
+    label.append(caption, control);
+    form.append(label);
+    return label;
+}
+
+function makeGroupNameInput(name = '') {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = '예: 여행 메모';
+    input.required = true;
+    input.pattern = '.*\\S.*';
+    input.maxLength = 80;
+    input.value = name;
+    return input;
+}
+
+async function groupSelectedMemos() {
+    if (!selecting || !selected.size) return;
+    const ids = [...selected];
+    const form = makeGroupForm();
+    const select = document.createElement('select');
+    select.add(new Option('새 묶음 만들기', 'new'));
+    for (const group of getSettings().groups) {
+        if (group.id !== activeGroupId) select.add(new Option(group.name, `group:${group.id}`));
+    }
+    if (activeGroupId !== null) select.add(new Option('내 메모로 꺼내기', 'loose'));
+    if (select.options.length > 1) addGroupField(form, '보낼 곳', select);
+    const input = makeGroupNameInput();
+    const nameLabel = addGroupField(form, '새 묶음 이름', input);
+    select.addEventListener('change', () => {
+        nameLabel.hidden = input.disabled = select.value !== 'new';
+    });
+    const choice = await showDialog({ icon: 'fa-folder', title: `메모 ${ids.length}개 묶기`, form,
+        buttons: [{label:'취소', value:'cancel', kind:'soft'}, {label:'확인', value:'ok', kind:'accent', submit:true}] });
+    if (choice !== 'ok') return;
+    let id = null;
+    if (select.value === 'new') {
+        const group = createMemoGroup(input.value);
+        if (!group) return;
+        id = group.id;
+    } else if (select.value !== 'loose') {
+        id = select.value.slice('group:'.length);
+    }
+    moveMemosToGroup(ids, id);
+    openMemoGroup(id);
+}
+
+async function renameCurrentGroup() {
+    const group = getSettings().groups.find(item => item.id === activeGroupId);
+    if (!group) return;
+    const form = makeGroupForm();
+    const input = makeGroupNameInput(group.name);
+    addGroupField(form, '묶음 이름', input);
+    const choice = await showDialog({ icon:'fa-folder', title:'묶음 이름 변경', form,
+        buttons:[{label:'취소', value:'cancel', kind:'soft'}, {label:'저장', value:'ok', kind:'accent', submit:true}] });
+    if (choice === 'ok' && renameMemoGroup(group.id, input.value)) renderList();
+}
 
 function setSelecting(on) {
     setMoreMenuOpen(false);
@@ -1153,7 +1356,7 @@ function toggleSelected(id) {
 
 function toggleSelectAll() {
     const query = normalizeQuery(searchQuery);
-    const shown = getSortedNotes().filter(note => !query || matchesQuery(note, query));
+    const shown = notesInList(query).filter(note => !query || matchesQuery(note, query));
     const allSelected = shown.length > 0 && shown.every(note => selected.has(note.id));
     for (const note of shown) {
         if (allSelected) {
@@ -1359,14 +1562,15 @@ function watchPanelResize(panelEl) {
 const panelHtml = `
 <div id="sm_panel" class="sm-scope sm-hidden">
     <div class="sm-panel-header">
-        <span class="sm-panel-title"><i class="fa-solid fa-note-sticky"></i> 심플메모장</span>
+        <span class="sm-panel-title"><i class="fa-solid fa-note-sticky"></i> 심플 메모장</span>
         <div class="sm-panel-btn sm-close" title="닫기"><i class="fa-solid fa-xmark"></i></div>
     </div>
     <div class="sm-body">
         <div class="sm-view-list">
             <div class="sm-head sm-head-normal">
-                <span class="sm-head-title">내 메모<span class="sm-count">0</span></span>
-                <button type="button" class="sm-btn sm-btn-soft sm-select-start" title="여러 개 골라서 삭제">선택</button>
+                <button type="button" class="sm-btn sm-btn-round sm-group-back sm-hidden" aria-label="내 메모로" title="내 메모로"><i class="fa-solid fa-arrow-left"></i></button>
+                <span class="sm-head-title"><span class="sm-list-name">내 메모</span><span class="sm-count">0</span></span>
+                <button type="button" class="sm-btn sm-btn-soft sm-select-start" title="메모 선택">선택</button>
                 <button type="button" class="sm-btn sm-btn-accent sm-add">
                     <i class="fa-solid fa-plus"></i> 새 메모
                 </button>
@@ -1391,6 +1595,7 @@ const panelHtml = `
                         <span class="sm-trash-dot sm-hidden" aria-hidden="true"></span>
                     </button>
                     <span id="sm_more_menu" class="sm-more-menu sm-hidden" role="group" aria-label="메모 관리">
+                        <button type="button" class="sm-more-item sm-rename-group sm-hidden"><i class="fa-solid fa-pen" aria-hidden="true"></i> 묶음 이름 변경</button>
                         <button type="button" class="sm-more-item sm-open-trash" title="휴지통">
                             <span class="sm-menu-icon" aria-hidden="true">
                                 <i class="fa-solid fa-trash-can"></i>
@@ -1421,6 +1626,7 @@ const panelHtml = `
                 </span>
             </div>
             <div class="sm-foot sm-foot-select sm-hidden">
+                <button type="button" class="sm-btn sm-btn-accent sm-group-selected" disabled><i class="fa-solid fa-folder"></i> 묶기</button>
                 <button type="button" class="sm-btn sm-btn-danger sm-delete-selected" disabled>
                     <i class="fa-solid fa-trash-can"></i> <span class="sm-delete-label">삭제</span>
                 </button>
@@ -1481,7 +1687,7 @@ const panelHtml = `
 const menuButtonHtml = `
 <div id="sm_menu_button" class="list-group-item flex-container flexGap5 interactable" tabindex="0">
     <i class="fa-solid fa-note-sticky"></i>
-    <span>심플메모장</span>
+    <span>심플 메모장</span>
 </div>`;
 
 jQuery(async () => {
@@ -1587,6 +1793,10 @@ jQuery(async () => {
         }
     });
 
+    $(document).on('click', '.sm-group-selected', groupSelectedMemos);
+    $(document).on('click', '.sm-rename-group', renameCurrentGroup);
+    $(document).on('click', '.sm-group-card', function () { openMemoGroup(this.dataset.groupId); });
+    $(document).on('click', '.sm-group-back', () => openMemoGroup(null));
     $(document).on('click', '.sm-add', newNote);
     $(document).on('click', '.sm-select-start', () => setSelecting(true));
     $(document).on('click', '.sm-select-cancel', () => setSelecting(false));

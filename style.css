@@ -104,7 +104,7 @@
 
 #sm_panel.sm-hidden,
 #sm_panel .sm-hidden {
-    display: none;
+    display: none !important;
 }
 
 /* 폰: 상단 바와 채팅 입력창 사이를 채우는 시트 */
@@ -358,6 +358,28 @@
 .sm-item:hover {
     background-color: var(--sm-card-hover);
 }
+
+#sm_panel .sm-group-card {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--sm-border);
+    border-radius: 14px;
+    background: var(--sm-card);
+    color: var(--sm-fg);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+#sm_panel .sm-group-card:hover { background: var(--sm-card-hover); }
+.sm-group-icon { color: var(--sm-accent-ink); }
+.sm-list-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#sm_panel .sm-foot-select > .sm-btn { flex: 1 1 0; }
 
 .sm-item-top {
     display: flex;
@@ -1064,6 +1086,27 @@
     white-space: pre-line;
     overflow-wrap: anywhere;
 }
+
+#sm_panel .sm-group-form, #sm_panel .sm-group-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-align: left;
+}
+#sm_panel .sm-group-form { gap: 12px; }
+#sm_panel .sm-group-field[hidden] { display: none; }
+#sm_panel .sm-group-field input, #sm_panel .sm-group-field select {
+    width: 100%;
+    min-height: 36px;
+    padding: 4px 8px;
+    border: 1px solid var(--sm-border);
+    border-radius: 8px;
+    background-color: var(--sm-field);
+    color: var(--sm-fg);
+    font-family: inherit;
+    font-size: 16px;
+}
+#sm_panel .sm-dialog:has(.sm-group-form) { max-height: 100%; overflow-y: auto; }
 
 .sm-dialog-actions {
     display: flex;
